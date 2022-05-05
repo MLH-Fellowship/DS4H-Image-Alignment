@@ -15,7 +15,19 @@ The implemented least-squares method automatically approximates the solution of 
 
 DS4H Image Alignment has been implemented in Java as a plugin for ImageJ/Fiji. It works with “.svs” files, but also all the medical imaging formats included in the [[Bio-formats]] library.
 
+## Installation ##
 
+DS4H Image Alignment can be installed easily, on Windows and Apple Silicon M1.
+
+[Windows Version here](https://github.com/UniBoDS4H/DS4H-Image-Alignment/releases/tag/windows#:~:text=Compare-,v1.1.0,-Latest)
+
+[Apple Silicon Version here](https://github.com/UniBoDS4H/DS4H-Image-Alignment/releases/tag/mac_os_x_apple_silicon#:~:text=Compare-,v1.1.0,-Edodums%20released%20this)
+
+Download only the *.jar file and the two libraries (e.g. *.dll, *.dylib), you can ignore the other links.
+
+The jar file goes in **plugin/** folder, the other two libraries have to moved to **lib/** folder.
+
+The libraries are useful for the OpenCV functionality, hence they are **MANDATORY** to be downloaded.
 
 ## Download ##
 

@@ -273,6 +273,11 @@ public class ImagesManager implements ListIterator<ImagePlus>, Observable {
   public List<ImageFile> getOriginalImageFiles() {
     return this.originalImageFiles;
   }
+
+  public void clear() {
+    this.getImageFiles().clear();
+    this.getOriginalImageFiles().clear();
+  }
   
   /**
    * Remove the imageFile from the manager and updates the image index

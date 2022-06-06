@@ -9,37 +9,19 @@
 
 package ds4h;
 
-import ds4h.image.registration.ImageAlignment;
-import ij.IJ;
+import ds4h.dialog.project.ProjectDialog;
 import ij.plugin.PlugIn;
-
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
+import javax.swing.*;
 
 public class DS4H implements PlugIn {
-  private static void deleteTempFilesOnExit(ImageAlignment imageAlignment) {
-    Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-      imageAlignment.getTempImages().forEach(tempImage -> {
-        try {
-          Files.deleteIfExists(Paths.get(tempImage));
-        } catch (IOException e) {
-          IJ.showMessage(e.getMessage());
-        }
-      });
-    }));
-  }
   
   @Override
   public void run(String s) {
-    ImageAlignment imageAlignment = new ImageAlignment();
-    imageAlignment.run();
-    deleteTempFilesOnExit(imageAlignment);
+    SwingUtilities.invokeLater(ProjectDialog::new);
   }
   
   public static void main(String[] args) {
-    ImageAlignment imageAlignment = new ImageAlignment();
-    imageAlignment.run();
-    DS4H.deleteTempFilesOnExit(imageAlignment);
+    DS4H ds4H = new DS4H();
+    ds4H.run("");
   }
 }

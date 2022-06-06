@@ -251,6 +251,15 @@ public class MainDialog extends ImageWindow {
     MenuItem menuItem = new MenuItem("Open file...");
     menuItem.addActionListener(e -> this.eventListener.onMainDialogEvent(new OpenFileEvent()));
     fileMenu.add(menuItem);
+
+    // TODO: Refactor pls
+    menuItem = new MenuItem("Load Project");
+    menuItem.addActionListener(e -> eventListener.onMainDialogEvent(new LoadProjectEvent()));
+    fileMenu.add(menuItem);
+    menuItem = new MenuItem("Save Project");
+    menuItem.addActionListener(e -> eventListener.onMainDialogEvent(new SaveProjectEvent()));
+    fileMenu.add(menuItem);
+    fileMenu.addSeparator();
     menuItem = new MenuItem("Add images to current stack");
     menuItem.addActionListener(e -> FileService.promptForFiles().forEach(path -> this.eventListener.onMainDialogEvent(new AddFileEvent(path))));
     fileMenu.add(menuItem);

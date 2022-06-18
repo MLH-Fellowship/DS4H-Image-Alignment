@@ -11,13 +11,14 @@ package ds4h;
 
 import ds4h.dialog.project.ProjectDialog;
 import ij.plugin.PlugIn;
-import javax.swing.*;
+
+import java.awt.*;
 
 public class DS4H implements PlugIn {
   
   @Override
   public void run(String s) {
-    SwingUtilities.invokeLater(ProjectDialog::new);
+    EventQueue.invokeLater(ProjectDialog::new);
   }
   
   public static void main(String[] args) {

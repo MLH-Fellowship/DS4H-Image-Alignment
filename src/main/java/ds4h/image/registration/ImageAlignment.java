@@ -10,7 +10,7 @@
 package ds4h.image.registration;
 
 import ds4h.builder.AbstractBuilder;
-import ds4h.builder.FREAKBuilder;
+import ds4h.builder.BriefBuilder;
 import ds4h.builder.LeastSquareTransformationBuilder;
 import ds4h.dialog.about.AboutDialog;
 import ds4h.dialog.align.AlignDialog;
@@ -56,7 +56,6 @@ import java.awt.*;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.MathContext;
@@ -84,10 +83,6 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
     private static final String TOO_FEW_CORNER_POINTS = "Remember that if you want to align via corners, you should have the same numbers of Corners for each image, and they should be at least 3";
     private static final String DELETE_COMMAND = "Delete";
 
-    static {
-        ImageAlignment.loader();
-    }
-
     private List<String> tempImages = new ArrayList<>();
     private ImagesManager manager;
     private BufferedImage image = null;
@@ -101,7 +96,7 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
     private boolean alignedImageSaved = false;
     private long totalMemory = 0;
 
-    private static void loader() {
+    static {
         Loader loader = new Loader();
         loader.load();
     }
@@ -390,7 +385,7 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
      * TODO: refactor codebase when you have time
      **/
     private void autoAlign(AutoAlignEvent event) {
-        AbstractBuilder builder = new FREAKBuilder(this.getLoadingDialog(), this.getManager(), event, this);
+        AbstractBuilder builder = new BriefBuilder(this.getLoadingDialog(), this.getManager(), event, this);
         builder.getLoadingDialog().showDialog();
         Utilities.setTimeout(() -> {
             try {
@@ -686,8 +681,6 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
             this.getMainDialog().setPrevImageButtonEnabled(this.getManager().hasPrevious());
             this.getMainDialog().setNextImageButtonEnabled(this.getManager().hasNext());
             this.getMainDialog().setTitle(MessageFormat.format(MAIN_DIALOG_TITLE_PATTERN, this.getManager().getCurrentIndex() + 1, this.getManager().getNImages()));
-            this.getMainDialog().pack();
-            this.getMainDialog().setVisible(true);
             this.getLoadingDialog().hideDialog();
             if (this.getImage().isReduced())
                 JOptionPane.showMessageDialog(null, IMAGES_SCALED_MESSAGE, "Info", JOptionPane.INFORMATION_MESSAGE);

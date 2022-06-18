@@ -1,7 +1,7 @@
 package ds4h.dialog.preview.event;
 
 public class ChangeImageEvent implements IPreviewDialogEvent {
-    private int index;
+    private final int index;
     public ChangeImageEvent(int index) {
         this.index = index;
     }

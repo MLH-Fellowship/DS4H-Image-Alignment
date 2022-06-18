@@ -8,31 +8,35 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class ProjectService {
-    private final static String ROIS_AND_INDEXES = "rois_and_indexes";
+    private static final String ROIS_AND_INDEXES = "rois_and_indexes";
 
     private ProjectService() {}
 
     public static Project load() {
-        Project project;
+        Project project = null;
         final Optional<String> zipFile = FileService.promptForFile((dir, name) -> name.endsWith(".zip"));
         if (!zipFile.isPresent()) {
             return null;
         }
         final String unzippedFile = ZipService.extract(zipFile.get()).getAbsolutePath();
         final Set<String> files = FileService.getAllFiles(unzippedFile);
-        project = extractFilePaths(files, XMLService.loadProject(files.stream().filter(file -> file.endsWith("xml")).findFirst().get()));
+        Optional<String> xmlPath = files.stream().filter(file -> file.endsWith("xml")).findFirst();
+        if (xmlPath.isPresent()) {
+            project = extractFilePaths(files, XMLService.loadProject(xmlPath.get()));
+        }
         return project;
     }
 
     private static Project extractFilePaths(Set<String> files, Project project) {
         List<String> filePaths = files.stream().filter(file -> !file.endsWith("xml")).sorted().sorted(Comparator.comparing(item -> {
+            int value = 0;
             for (String filePath : project.getFilePaths()) {
                 if (filePath.endsWith(item)) {
-                    return 1;
+                    value = 1;
+                    break;
                 }
-                return 0;
             }
-            return -1;
+            return value;
         })).collect(Collectors.toList());
         project.setFilePaths(filePaths);
 

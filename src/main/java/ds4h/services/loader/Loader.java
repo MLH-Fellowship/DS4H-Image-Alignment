@@ -16,8 +16,16 @@ public class Loader implements LibraryLoader {
             this.resourceLoader = new WindowsDllLoader();
         }
         if (LibraryLoader.getOS().startsWith("Mac OS")) {
-            this.resourceLoader = new MacOsXDylibLoader();
+            this.resourceLoader = isARM() || !isFiji() ? new MacOsXDylibLoader() : new OldMacOsDyLibLoader();
         }
+    }
+
+    private boolean isFiji() {
+        return IJ.getInstance() != null && IJ.getInstance().getInfo().contains("Fiji");
+    }
+
+    private boolean isARM() {
+        return LibraryLoader.getOSArch().contains("aarch64");
     }
 
     @Override
@@ -32,12 +40,12 @@ public class Loader implements LibraryLoader {
     private void handleLoad(InputStream in) {
         try {
             File fileOut = File.createTempFile("lib", this.resourceLoader.getExt());
-            OutputStream out = FileUtils.openOutputStream(fileOut);
-            if (in != null) {
-                IOUtils.copy(in, out);
-                in.close();
-                out.close();
-                System.load(fileOut.toString());
+            try (OutputStream out = FileUtils.openOutputStream(fileOut)) {
+                if (in != null) {
+                    IOUtils.copy(in, out);
+                    in.close();
+                    System.load(fileOut.toString());
+                }
             }
         } catch (Exception e) {
             IJ.showMessage(e.getMessage());

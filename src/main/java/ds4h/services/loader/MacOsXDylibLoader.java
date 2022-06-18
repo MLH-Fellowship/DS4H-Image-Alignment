@@ -8,7 +8,7 @@ import java.util.List;
 import static java.util.stream.Collectors.toList;
 
 public class MacOsXDylibLoader implements ResourceLoader {
-    private static final String PREFIX = "libopencv_";
+    private static final String PREFIX = "libopencv_arm_";
     private static final String EXT = ".dylib";
 
     @Override

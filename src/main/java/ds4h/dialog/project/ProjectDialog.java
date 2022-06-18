@@ -14,9 +14,9 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 
 public class ProjectDialog extends JPanel implements ActionListener {
-    private final static String NEW_PROJECT = "New Project (Default)";
-    private final static String LOAD_PROJECT = "Load Project ( the format is a zip file )";
-    private final static String CONTINUE = "Continue";
+    private static final String NEW_PROJECT = "New Project (Default)";
+    private static final String LOAD_PROJECT = "Load Project ( the format is a zip file )";
+    private static final String CONTINUE = "Continue";
     private final JFrame frame = new JFrame("Project Settings");
     private final ImageAlignment imageAlignment = new ImageAlignment();
 

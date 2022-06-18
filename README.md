@@ -78,3 +78,7 @@ The Data Science for Health (DS4H) group:
 - Antonella Carbonaro, Department of Computer Science and Engineering (DISI), University of Bologna, Bologna, Italy, email: antonella.carbonaro@unibo.it
 
 - Filippo Piccinini, Istituto Scientifico Romagnolo per lo Studio e la Cura dei Tumori (IRST) IRCCS, Meldola (FC), Italy, email: filippo.piccinini@irst.emr.it
+
+
+## Developers notice ##
+To build the uberjar, useful for the ImageJ platform : mvn package -P uberjar

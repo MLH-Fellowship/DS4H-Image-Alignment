@@ -53,7 +53,7 @@ public class MainDialog extends ImageWindow {
   private boolean debounce = false;
   private Rectangle2D.Double lastBound;
   private Roi lastRoi;
-  
+
   public MainDialog(BufferedImage plus, OnMainDialogEventListener listener) {
     super(plus, new CustomCanvas(plus));
     this.image = plus;
@@ -156,6 +156,8 @@ public class MainDialog extends ImageWindow {
     buttonsPanel.add(alignJPanel);
     final GridBagLayout layout = new GridBagLayout();
     final GridBagConstraints allConstraints = new GridBagConstraints();
+    final Panel menu = new Panel();
+    final JPanel jMenu = new JPanel();
     final Panel all = new Panel();
     all.setLayout(layout);
     // sets little of padding to ensure that the @ImagePlus text is shown and not covered by the panel
@@ -171,18 +173,16 @@ public class MainDialog extends ImageWindow {
     allConstraints.gridx++;
     allConstraints.weightx = 1;
     allConstraints.weighty = 1;
-    // this is just a cheap trick i made 'cause i don't properly know java swing: let's fake the background of the window so the it seems the column on the left is full length vertically
     all.setBackground(new Color(238, 238, 238));
     all.add(canvas, allConstraints);
-    final GridBagLayout winBagLayout = new GridBagLayout();
-    final GridBagConstraints winBagConstraints = new GridBagConstraints();
-    winBagConstraints.insets = new Insets(5, 0, 0, 0);
-    winBagConstraints.anchor = GridBagConstraints.NORTHWEST;
-    winBagConstraints.fill = GridBagConstraints.BOTH;
-    winBagConstraints.weightx = 1;
-    winBagConstraints.weighty = 1;
-    this.setLayout(winBagLayout);
-    this.add(all, winBagConstraints);
+    final BorderLayout winLayout = new BorderLayout();
+    this.setLayout(winLayout);
+    jMenu.add(getMenu());
+    menu.setLayout(new BorderLayout());
+    menu.add(jMenu, BorderLayout.WEST);
+    menu.setBackground(new Color(238, 238, 238));
+    this.add(menu, BorderLayout.PAGE_START);
+    this.add(all, BorderLayout.PAGE_END);
     // Propagate all listeners
     Stream.<Component>of(all, buttonsPanel).forEach(component -> Arrays.stream(getKeyListeners()).forEach(component::addKeyListener));
     this.eventListener = listener;
@@ -219,13 +219,13 @@ public class MainDialog extends ImageWindow {
         mouseOverCanvas = true;
         super.mouseEntered(e);
       }
-      
+
       @Override
       public void mouseExited(MouseEvent e) {
         mouseOverCanvas = false;
         super.mouseExited(e);
       }
-      
+
       @Override
       public void mouseReleased(MouseEvent e) {
         handleOutOfBoundsRois();
@@ -246,43 +246,45 @@ public class MainDialog extends ImageWindow {
       }
       this.btnDeleteRoi.setEnabled(indices.length != 0);
     });
-    final MenuBar menuBar = new MenuBar();
-    final Menu fileMenu = new Menu("File");
-    MenuItem menuItem = new MenuItem("Open file...");
-    menuItem.addActionListener(e -> this.eventListener.onMainDialogEvent(new OpenFileEvent()));
-    fileMenu.add(menuItem);
-
-    // TODO: Refactor pls
-    menuItem = new MenuItem("Load Project");
-    menuItem.addActionListener(e -> eventListener.onMainDialogEvent(new LoadProjectEvent()));
-    fileMenu.add(menuItem);
-    menuItem = new MenuItem("Save Project");
-    menuItem.addActionListener(e -> eventListener.onMainDialogEvent(new SaveProjectEvent()));
-    fileMenu.add(menuItem);
-    fileMenu.addSeparator();
-    menuItem = new MenuItem("Add images to current stack");
-    menuItem.addActionListener(e -> FileService.promptForFiles().forEach(path -> this.eventListener.onMainDialogEvent(new AddFileEvent(path))));
-    fileMenu.add(menuItem);
-    menuItem = new MenuItem("Remove image...");
-    menuItem.addActionListener(e -> eventListener.onMainDialogEvent(new RemoveImageEvent()));
-    fileMenu.add(menuItem);
-    fileMenu.addSeparator();
-    menuItem = new MenuItem("Exit");
-    menuItem.addActionListener(e -> eventListener.onMainDialogEvent(new ExitEvent()));
-    fileMenu.add(menuItem);
-    final Menu aboutMenu = new Menu("?");
-    menuItem = new MenuItem("About...");
-    menuItem.addActionListener(e -> eventListener.onMainDialogEvent(new OpenAboutEvent()));
-    aboutMenu.add(menuItem);
     MainDialog.currentImage = image;
-    menuBar.add(fileMenu);
-    menuBar.add(aboutMenu);
     this.addEventListenerToImage();
-    this.setMenuBar(menuBar);
     new Zoom().run(SCALE_OPTION);
     this.pack();
+    this.setVisible(true);
   }
-  
+
+  private JMenuBar getMenu() {
+    final JMenu fileMenu = new JMenu("File");
+    final JMenuItem openFileItem = new JMenuItem("Open file...");
+    openFileItem.addActionListener(e -> this.eventListener.onMainDialogEvent(new OpenFileEvent()));
+    fileMenu.add(openFileItem);
+    final JMenuItem loadProjectItem = new JMenuItem("Load Project");
+    loadProjectItem.addActionListener(e -> this.eventListener.onMainDialogEvent(new LoadProjectEvent()));
+    fileMenu.add(loadProjectItem);
+    final JMenuItem saveProjectItem = new JMenuItem("Save Project");
+    saveProjectItem.addActionListener(e -> this.eventListener.onMainDialogEvent(new SaveProjectEvent()));
+    fileMenu.add(saveProjectItem);
+    fileMenu.addSeparator();
+    final JMenuItem addToCurrentStackItem = new JMenuItem("Add images to current stack");
+    addToCurrentStackItem.addActionListener(e -> FileService.promptForFiles().forEach(path -> this.eventListener.onMainDialogEvent(new AddFileEvent(path))));
+    fileMenu.add(addToCurrentStackItem);
+    final JMenuItem removeImageItem = new JMenuItem("Remove image...");
+    removeImageItem.addActionListener(e -> this.eventListener.onMainDialogEvent(new RemoveImageEvent()));
+    fileMenu.add(removeImageItem);
+    fileMenu.addSeparator();
+    final JMenuItem exitItem = new JMenuItem("Exit");
+    exitItem.addActionListener(e -> this.eventListener.onMainDialogEvent(new ExitEvent()));
+    fileMenu.add(exitItem);
+    final JMenu aboutMenu = new JMenu("?");
+    final JMenuItem aboutItem = new JMenuItem("About...");
+    aboutItem.addActionListener(e -> this.eventListener.onMainDialogEvent(new OpenAboutEvent()));
+    aboutMenu.add(aboutItem);
+    JMenuBar menuBar = new JMenuBar();
+    menuBar.add(fileMenu);
+    menuBar.add(aboutMenu);
+    return menuBar;
+  }
+
   private void handleOutOfBoundsRois() {
     final Roi[] roisAsArray = this.image.getManager().getRoisAsArray();
     final List<Integer> roisToDelete = new ArrayList<>();
@@ -304,7 +306,7 @@ public class MainDialog extends ImageWindow {
       }
     }
   }
-  
+
   private void listenerROI() {
     Roi.addRoiListener((imagePlus, event) -> {
       if (event != RoiListener.MOVED) {
@@ -333,15 +335,15 @@ public class MainDialog extends ImageWindow {
       }
     });
   }
-  
+
   private boolean isNotTheSameBounds(Rectangle2D bounds) {
     return !Objects.equals(bounds, this.lastBound);
   }
-  
+
   private boolean isNotTheSameRoi(Roi selectedRoi) {
     return !Objects.equals(selectedRoi, this.lastRoi);
   }
-  
+
   private void handleMultipleRoisTranslation(double translationX, double translationY, Roi[] roisAsArray, int[] indices) {
     // THEN REGISTER THE CHANGE FOR ALL
     for (int index : indices) {
@@ -352,8 +354,8 @@ public class MainDialog extends ImageWindow {
       jListRoisModel.set(index, MessageFormat.format("{0} - {1},{2}", index + 1, finalBounds.x, finalBounds.y));
     }
   }
-  
-  
+
+
   /**
    * Change the actual image displayed in the main view, based on the given BufferedImage istance
    *
@@ -377,7 +379,7 @@ public class MainDialog extends ImageWindow {
       this.pack();
     }
   }
-  
+
   /**
    * Adds an event listener to the current image
    */
@@ -392,7 +394,7 @@ public class MainDialog extends ImageWindow {
       }
     });
   }
-  
+
   /**
    * Update the Roi List based on the given RoiManager instance
    * // THIS PIECE OF CODE IS REPEATED A LOT OF TIMES //
@@ -418,13 +420,13 @@ public class MainDialog extends ImageWindow {
     this.refreshROIList(manager);
     this.btnDeleteRoi.setEnabled(this.jListRois.getSelectedIndices().length != 0);
   }
-  
+
   private void renameRois() {
     for (int index = 0; index < this.image.getManager().getRoisAsArray().length; index++) {
       this.image.getManager().rename(index, String.valueOf(index + 1));
     }
   }
-  
+
   public void refreshROIList(RoiManager manager) {
     this.jListRoisModel.removeAllElements();
     final String pattern = "{0} - {1},{2}";
@@ -436,33 +438,33 @@ public class MainDialog extends ImageWindow {
       index++;
     }
   }
-  
+
   public void setPreviewWindowCheckBox(boolean value) {
     this.checkShowPreview.setSelected(value);
   }
-  
+
   public void setNextImageButtonEnabled(boolean enabled) {
     this.btnNextImage.setEnabled(enabled);
   }
-  
+
   public void setPrevImageButtonEnabled(boolean enabled) {
     this.btnPrevImage.setEnabled(enabled);
   }
-  
+
   public void setAlignButtonEnabled(boolean enabled) {
     this.btnAlignImages.setEnabled(enabled);
     this.checkKeepOriginal.setEnabled(enabled);
   }
-  
+
   public void setCopyCornersEnabled(boolean enabled) {
     this.btnCopyCorners.setEnabled(enabled);
   }
-  
+
   @Override
   public void setTitle(String title) {
     super.setTitle(DIALOG_STATIC_TITLE + " " + title);
   }
-  
+
   private class KeyboardEventDispatcher implements KeyEventDispatcher {
     @Override
     public boolean dispatchKeyEvent(KeyEvent e) {

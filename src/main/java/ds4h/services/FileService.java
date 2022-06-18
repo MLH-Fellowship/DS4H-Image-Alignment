@@ -33,6 +33,10 @@ public class FileService {
     private FileService() {
     }
 
+    public static boolean isFileInDirectory(String filename, String directory) {
+        return new File(directory, filename).exists();
+    }
+
     public static List<String> promptForFiles() {
         FileDialog fileDialog = FileService.fileDialogHandler(true, false, null);
         return Arrays.stream(fileDialog.getFiles()).map(File::getPath).collect(Collectors.toList());

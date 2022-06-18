@@ -20,6 +20,10 @@ public interface LibraryLoader {
   static String getOS() {
     return System.getProperty("os.name");
   }
+
+  static String getOSArch() {
+    return System.getProperty("os.arch");
+  }
   
   /**
    * Loads library/ies

@@ -128,13 +128,13 @@ public class ImagesManager implements ListIterator<ImagePlus>, Observable {
   private BufferedImage getImage(int index, boolean wholeSlide, boolean isOriginal) {
     int progressive = 0;
     ImageFile imageFile = null;
-    List<ImageFile> imageFiles = isOriginal ? new ArrayList<>(this.getOriginalImageFiles()) : new ArrayList<>(this.getImageFiles());
-    for (int i = 0; i < imageFiles.size(); i++) {
-      if (progressive + imageFiles.get(i).getNImages() > index) {
-        imageFile = imageFiles.get(i);
+    List<ImageFile> imageFileList = isOriginal ? new ArrayList<>(this.getOriginalImageFiles()) : new ArrayList<>(this.getImageFiles());
+    for (int i = 0; i < imageFileList.size(); i++) {
+      if (progressive + imageFileList.get(i).getNImages() > index) {
+        imageFile = imageFileList.get(i);
         break;
       }
-      progressive += imageFiles.get(i).getNImages();
+      progressive += imageFileList.get(i).getNImages();
     }
     try {
       if (index == -1) {

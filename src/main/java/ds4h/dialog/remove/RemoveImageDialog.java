@@ -109,7 +109,6 @@ public class RemoveImageDialog extends JDialog {
 
         @Override
         public Component getListCellRendererComponent(JList<? extends ImageFile> list, ImageFile value, int index, boolean isSelected, boolean cellHasFocus) {
-
             lbl_caption.setText(MessageFormat.format("File {0}, {1}", index + 1, value.getPathFile()));
             lbl_caption.setFont(new Font(lbl_caption.getFont().getName(), lbl_caption.getFont().getStyle(), lbl_caption.getFont().getSize()));
             lbl_caption.setForeground(Color.DARK_GRAY);
@@ -123,7 +122,6 @@ public class RemoveImageDialog extends JDialog {
                 lbl.setIcon(new ImageIcon(thumb));
                 pnl_images.add(lbl);
             });
-
             // when select item
             if (isSelected) {
                 setBackground(list.getSelectionBackground());

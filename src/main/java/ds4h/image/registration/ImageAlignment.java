@@ -29,6 +29,7 @@ import ds4h.dialog.preview.event.IPreviewDialogEvent;
 import ds4h.dialog.remove.OnRemoveDialogEventListener;
 import ds4h.dialog.remove.RemoveImageDialog;
 import ds4h.dialog.remove.event.IRemoveDialogEvent;
+import ds4h.dialog.remove.event.RemoveImageEvent;
 import ds4h.image.buffered.BufferedImage;
 import ds4h.image.manager.ImagesManager;
 import ds4h.image.model.ImageFile;
@@ -348,7 +349,7 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
         }
         this.getMainDialog().setPrevImageButtonEnabled(this.getManager().hasPrevious());
         this.getMainDialog().setNextImageButtonEnabled(this.getManager().hasNext());
-        this.getMainDialog().setTitle(MessageFormat.format(MAIN_DIALOG_TITLE_PATTERN, this.getManager().getCurrentIndex() + 1, this.getManager().getNImages()));
+        this.getMainDialog().setTitle(MessageFormat.format(MAIN_DIALOG_TITLE_PATTERN, this.getManager().getCurrentIndex(), this.getManager().getNImages()));
         this.refreshRoiGUI();
     }
 
@@ -495,7 +496,7 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
             this.getMainDialog().changeImage(this.getImage());
             this.getMainDialog().setPrevImageButtonEnabled(this.getManager().hasPrevious());
             this.getMainDialog().setNextImageButtonEnabled(this.getManager().hasNext());
-            this.getMainDialog().setTitle(MessageFormat.format(MAIN_DIALOG_TITLE_PATTERN, this.getManager().getCurrentIndex() + 1, this.getManager().getNImages()));
+            this.getMainDialog().setTitle(MessageFormat.format(MAIN_DIALOG_TITLE_PATTERN, this.getManager().getCurrentIndex(), this.getManager().getNImages()));
             this.getImage().buildMouseListener();
             this.getLoadingDialog().hideDialog();
             this.refreshRoiGUI();
@@ -565,8 +566,8 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
 
     @Override
     public void onRemoveDialogEvent(IRemoveDialogEvent removeEvent) {
-        if (removeEvent instanceof ds4h.dialog.remove.event.RemoveImageEvent) {
-            int imageFileIndex = ((ds4h.dialog.remove.event.RemoveImageEvent) removeEvent).getImageFileIndex();
+        if (removeEvent instanceof RemoveImageEvent) {
+            int imageFileIndex = ((RemoveImageEvent) removeEvent).getImageFileIndex();
             // only an image is available: if user remove this image we need to ask him to choose another one!
             if (this.manager.getImageFiles().size() == 1) {
                 String[] buttons = {"Yes", "No"};
@@ -584,14 +585,14 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
                 // remove the image selected
                 this.getRemoveImageDialog().removeImageFile(imageFileIndex);
                 this.getManager().removeImageFile(imageFileIndex);
-                this.image = this.getManager().get(this.getManager().getCurrentIndex());
-                this.originalImage = this.getManager().get(this.getManager().getCurrentIndex());
-                this.getMainDialog().changeImage(this.image);
-                this.getMainDialog().setPrevImageButtonEnabled(this.getManager().hasPrevious());
-                this.getMainDialog().setNextImageButtonEnabled(this.getManager().hasNext());
-                this.getMainDialog().setTitle(MessageFormat.format(MAIN_DIALOG_TITLE_PATTERN, this.getManager().getCurrentIndex() + 1, this.getManager().getNImages()));
-                this.refreshRoiGUI();
             }
+            this.image = this.getManager().get(this.getManager().getCurrentIndex());
+            this.originalImage = this.getManager().get(this.getManager().getCurrentIndex());
+            this.getMainDialog().changeImage(this.image);
+            this.getMainDialog().setPrevImageButtonEnabled(this.getManager().hasPrevious());
+            this.getMainDialog().setNextImageButtonEnabled(this.getManager().hasNext());
+            this.getMainDialog().setTitle(MessageFormat.format(MAIN_DIALOG_TITLE_PATTERN, this.getManager().getCurrentIndex(), this.getManager().getNImages()));
+            this.refreshRoiGUI();
         }
     }
 
@@ -638,7 +639,7 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
             this.mainDialog = new MainDialog(this.image, this);
             this.getMainDialog().setPrevImageButtonEnabled(this.getManager().hasPrevious());
             this.getMainDialog().setNextImageButtonEnabled(this.getManager().hasNext());
-            this.getMainDialog().setTitle(MessageFormat.format(MAIN_DIALOG_TITLE_PATTERN, this.getManager().getCurrentIndex() + 1, this.getManager().getNImages()));
+            this.getMainDialog().setTitle(MessageFormat.format(MAIN_DIALOG_TITLE_PATTERN, this.getManager().getCurrentIndex(), this.getManager().getNImages()));
             this.getLoadingDialog().hideDialog();
             if (this.getImage().isReduced())
                 JOptionPane.showMessageDialog(null, IMAGES_SCALED_MESSAGE, "Info", JOptionPane.INFORMATION_MESSAGE);

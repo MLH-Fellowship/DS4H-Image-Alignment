@@ -7,6 +7,8 @@ import javax.swing.*;
 import java.awt.*;
 import java.io.IOException;
 
+import static javax.swing.SwingConstants.CENTER;
+
 public class LoadingDialog extends JDialog {
   public LoadingDialog() {
     super();
@@ -18,9 +20,9 @@ public class LoadingDialog extends JDialog {
       IJ.showMessage(e.getMessage());
     }
     this.setLayout(new BorderLayout(0, 10));
-    this.add(new JLabel("", loading, JLabel.CENTER), BorderLayout.CENTER);
-    this.add(new JLabel("Working in progress...", JLabel.CENTER), BorderLayout.SOUTH);
-    this.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
+    this.add(new JLabel("", loading, CENTER), BorderLayout.CENTER);
+    this.add(new JLabel("Working in progress...", CENTER), BorderLayout.SOUTH);
+    this.setDefaultCloseOperation(DISPOSE_ON_CLOSE);
     this.setUndecorated(true);
     this.setModalityType(ModalityType.APPLICATION_MODAL);
     this.setSize(400, 200);

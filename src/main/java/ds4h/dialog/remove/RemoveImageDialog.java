@@ -1,7 +1,6 @@
 package ds4h.dialog.remove;
 
 import ds4h.image.model.ImageFile;
-import ds4h.dialog.remove.event.ExitEvent;
 import ds4h.dialog.remove.event.RemoveImageEvent;
 import ij.IJ;
 
@@ -15,7 +14,6 @@ import java.util.List;
 
 public class RemoveImageDialog extends JDialog {
     private JPanel contentPane;
-    private JButton btn_close;
     private JButton btn_delete;
     private JPanel pnl_buttons;
     private JPanel pnl_images;
@@ -44,7 +42,6 @@ public class RemoveImageDialog extends JDialog {
         this.getInsets().set(100, 100, 100, 100);
 
         this.btn_delete.addActionListener(e -> listener.onRemoveDialogEvent(new RemoveImageEvent(lst_images.getSelectedIndex())));
-        this.btn_close.addActionListener(e -> listener.onRemoveDialogEvent(new ExitEvent()));
     }
 
 
@@ -77,12 +74,6 @@ public class RemoveImageDialog extends JDialog {
         btn_delete.setPreferredSize(new Dimension(100, 30));
         btn_delete.setText("Delete");
         pnl_buttons.add(btn_delete);
-        btn_close = new JButton();
-        btn_close.setMaximumSize(new Dimension(100, 30));
-        btn_close.setMinimumSize(new Dimension(100, 30));
-        btn_close.setPreferredSize(new Dimension(100, 30));
-        btn_close.setText("Close");
-        pnl_buttons.add(btn_close);
         pnl_images = new JPanel();
         pnl_images.setLayout(new BorderLayout(5, 5));
         contentPane.add(pnl_images, BorderLayout.CENTER);

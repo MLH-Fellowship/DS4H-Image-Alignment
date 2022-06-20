@@ -31,7 +31,7 @@ public class AboutDialog extends JDialog {
     this.getRootPane().setDefaultButton(buttonOK);
     this.buttonOK.addActionListener(e -> onOK());
     // call onCancel() when cross is clicked
-    this.setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
+    this.setDefaultCloseOperation(DISPOSE_ON_CLOSE);
     this.addWindowListener(new WindowAdapter() {
       public void windowClosing(WindowEvent e) {
         onCancel();

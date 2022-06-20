@@ -31,8 +31,8 @@ import java.util.stream.Collectors;
  */
 public class ImagesManager implements ListIterator<ImagePlus>, Observable {
   // the YYYY-MM-DD format grants to the user the fact that the sorting can be done always by the name
-  private final static String DATE_YMD_FORMAT = "yyyy-MM-dd";
-  private final static String DATE_HMS_FORMAT = "HH-mm-ss";
+  private static final String DATE_YMD_FORMAT = "yyyy-MM-dd";
+  private static final String DATE_HMS_FORMAT = "HH-mm-ss";
   private final PropertyChangeSupport support = new PropertyChangeSupport(this);
   private final List<ImageFile> imageFiles = new ArrayList<>();
   private final List<ImageFile> originalImageFiles = new ArrayList<>();
@@ -144,6 +144,7 @@ public class ImagesManager implements ListIterator<ImagePlus>, Observable {
         final BufferedImage image = imageFile.getImage(index - progressive, wholeSlide);
         image.setFilePath(imageFile.getPathFile());
         if (!isOriginal) {
+          // TODO: check index + 1
           image.setTitle(MessageFormat.format("Editor Image {0}/{1}", index + 1, this.getNImages()));
         }
         return image;

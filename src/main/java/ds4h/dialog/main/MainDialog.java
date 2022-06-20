@@ -61,7 +61,7 @@ public class MainDialog extends ImageWindow {
     this.checkShowPreview = new JCheckBox("Show preview window");
     this.checkShowPreview.setToolTipText("Show a preview window");
     this.btnDeleteRoi = new JButton("DELETE CORNER");
-    this.btnDeleteRoi.setToolTipText("Delete current corner point selected");
+    this.btnDeleteRoi.setToolTipText("Delete selected current corner point");
     this.btnDeleteRoi.setEnabled(false);
     this.btnPrevImage = new JButton("PREV IMAGE");
     this.btnPrevImage.setToolTipText("Select previous image in the stack");
@@ -111,6 +111,7 @@ public class MainDialog extends ImageWindow {
     this.btnCopyCorners = new JButton();
     this.btnCopyCorners.setText("COPY CORNERS");
     this.btnCopyCorners.setEnabled(false);
+    this.btnCopyCorners.setToolTipText("Select from which image you'll copy-paste the corners");
     cornersJPanel.add(this.btnCopyCorners, trainingConstraints);
     cornersJPanel.setLayout(trainingLayout);
     // Options panel
@@ -255,9 +256,6 @@ public class MainDialog extends ImageWindow {
 
   private JMenuBar getMenu() {
     final JMenu fileMenu = new JMenu("File");
-    final JMenuItem openFileItem = new JMenuItem("Open file...");
-    openFileItem.addActionListener(e -> this.eventListener.onMainDialogEvent(new OpenFileEvent()));
-    fileMenu.add(openFileItem);
     final JMenuItem loadProjectItem = new JMenuItem("Load Project");
     loadProjectItem.addActionListener(e -> this.eventListener.onMainDialogEvent(new LoadProjectEvent()));
     fileMenu.add(loadProjectItem);
@@ -272,9 +270,6 @@ public class MainDialog extends ImageWindow {
     removeImageItem.addActionListener(e -> this.eventListener.onMainDialogEvent(new RemoveImageEvent()));
     fileMenu.add(removeImageItem);
     fileMenu.addSeparator();
-    final JMenuItem exitItem = new JMenuItem("Exit");
-    exitItem.addActionListener(e -> this.eventListener.onMainDialogEvent(new ExitEvent()));
-    fileMenu.add(exitItem);
     final JMenu aboutMenu = new JMenu("?");
     final JMenuItem aboutItem = new JMenuItem("About...");
     aboutItem.addActionListener(e -> this.eventListener.onMainDialogEvent(new OpenAboutEvent()));
@@ -296,7 +291,7 @@ public class MainDialog extends ImageWindow {
       }
       roisToDelete.add(index);
     }
-    if (roisToDelete.size() > 0) {
+    if (!roisToDelete.isEmpty()) {
       String indexesJoinedMessage = roisToDelete.stream().map(value -> String.valueOf(value + 1)).collect(Collectors.joining(", "));
       String message = roisToDelete.size() == 1 ? String.format("Corner %s is going to be deleted", indexesJoinedMessage) : String.format("Corners %s are going to be deleted", indexesJoinedMessage);
       int answer = JOptionPane.showOptionDialog(null, message, "Warning", JOptionPane.OK_CANCEL_OPTION, JOptionPane.WARNING_MESSAGE, null, new String[]{"OK"}, new String[]{"OK"});
@@ -478,17 +473,10 @@ public class MainDialog extends ImageWindow {
         debounce = true;
         new Thread(() -> {
           try {
-            ChangeImageEvent.ChangeDirection direction = null;
-            if (isReleased && e.getKeyCode() == KeyEvent.VK_A) {
-              direction = ChangeImageEvent.ChangeDirection.PREV;
-            }
-            if (isReleased && e.getKeyCode() == KeyEvent.VK_D) {
-              direction = ChangeImageEvent.ChangeDirection.NEXT;
-            }
-            if (direction != null) {
-              eventListener.onMainDialogEvent(new ChangeImageEvent(direction));
-              e.consume();
-            }
+            ChangeImageEvent.ChangeDirection direction;
+            direction = isReleased && e.getKeyCode() == KeyEvent.VK_A ? ChangeImageEvent.ChangeDirection.PREV : ChangeImageEvent.ChangeDirection.NEXT;
+            eventListener.onMainDialogEvent(new ChangeImageEvent(direction));
+            e.consume();
           } catch (Exception e1) {
             IJ.showMessage(e1.getMessage());
           }

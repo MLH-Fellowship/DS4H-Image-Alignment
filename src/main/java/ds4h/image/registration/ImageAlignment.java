@@ -140,10 +140,6 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
             case "AutoAlignEvent":
                 this.autoAlign((AutoAlignEvent) dialogEvent);
                 break;
-            case "OpenFileEvent":
-            case "ExitEvent":
-                this.openOrExitEventHandler(dialogEvent);
-                break;
             case "OpenAboutEvent":
                 this.aboutDialog.setVisible(true);
                 break;
@@ -218,30 +214,6 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
             this.getLoadingDialog().hideDialog();
             this.getLoadingDialog().requestFocus();
         }, 20);
-    }
-
-    private void openOrExitEventHandler(IMainDialogEvent dialogEvent) {
-        boolean roisPresent = this.getManager().getRoiManagers().stream().anyMatch(it -> it.getRoisAsArray().length != 0);
-        if (roisPresent && handleRoisPresence(dialogEvent)) {
-            if (dialogEvent instanceof OpenFileEvent) {
-                String pathFile = promptForFile();
-                if (!pathFile.equals(NULL_PATH)) {
-                    this.disposeAll();
-                    this.initialize(Collections.singletonList(pathFile));
-                }
-            }
-            if (dialogEvent instanceof ExitEvent) {
-                this.disposeAll();
-                System.exit(0);
-            }
-        }
-    }
-
-    private boolean handleRoisPresence(IMainDialogEvent dialogEvent) {
-        String[] buttons = {"Yes", "No"};
-        String message = dialogEvent instanceof OpenFileEvent ? "This will replace the existing " + this.getImage().getFileInfo().fileName + ". Proceed anyway?" : "You will lose the existing added landmarks. Proceed anyway?";
-        int answer = JOptionPane.showOptionDialog(null, message, CAREFUL_NOW_TITLE, JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE, null, buttons, buttons[1]);
-        return answer != 1;
     }
 
     public void applyCorners(Map<Pair<BigDecimal, BigDecimal>, Integer> imagesIndexesWithRois) {
@@ -589,24 +561,10 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
             this.disposeAll();
             this.initialize(Collections.singletonList(this.getTempImages().get(this.getTempImages().size() - 1)));
         }
-
-        if (dialogEvent instanceof ds4h.dialog.align.event.ExitEvent) {
-            if (!this.alignedImageSaved) {
-                String[] buttons = {"Yes", "No"};
-                int answer = JOptionPane.showOptionDialog(null, ALIGNED_IMAGE_NOT_SAVED_MESSAGE, CAREFUL_NOW_TITLE, JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE, null, buttons, buttons[1]);
-                if (answer == 1) return;
-            }
-            this.getAlignDialog().setVisible(false);
-            this.getAlignDialog().dispose();
-        }
     }
 
     @Override
     public void onRemoveDialogEvent(IRemoveDialogEvent removeEvent) {
-        if (removeEvent instanceof ExitEvent) {
-            this.getRemoveImageDialog().setVisible(false);
-            this.getRemoveImageDialog().dispose();
-        }
         if (removeEvent instanceof ds4h.dialog.remove.event.RemoveImageEvent) {
             int imageFileIndex = ((ds4h.dialog.remove.event.RemoveImageEvent) removeEvent).getImageFileIndex();
             // only an image is available: if user remove this image we need to ask him to choose another one!
@@ -795,4 +753,3 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
         }
     }
 }
-

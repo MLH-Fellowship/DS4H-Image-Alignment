@@ -14,7 +14,7 @@ import java.awt.*;
 import java.awt.event.ItemEvent;
 
 public class SettingDialog extends JDialog {
-  private final static String MESSAGE = "Check one of these checkboxes to apply \nRigid or Projective Model \nIf nothing is selected then Affine Model\nis used instead";
+  private static final String MESSAGE = "The Affine model is used by default.\n Check one of these checkboxes to change it";
   private final SettingEvent settingEvent;
   private final JTextPane textPane;
   private final JCheckBox checkIsRigid;
@@ -46,7 +46,7 @@ public class SettingDialog extends JDialog {
     // add button
     this.add(this.getOkButton(), BorderLayout.SOUTH);
     this.setLocationRelativeTo(null); // centers the frame
-    this.setDefaultCloseOperation(JDialog.DO_NOTHING_ON_CLOSE);
+    this.setDefaultCloseOperation(DISPOSE_ON_CLOSE);
     this.pack();
     this.setVisible(true);
   }

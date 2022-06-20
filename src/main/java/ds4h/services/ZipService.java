@@ -13,7 +13,7 @@ import java.util.zip.ZipOutputStream;
 import static ds4h.services.FileService.newFile;
 
 public class ZipService {
-    private final static String DESKTOP_PATH = System.getProperty("user.home") + File.separator + "Desktop" + File.separator + "ds4hProjects" + File.separator;
+    private static final String DESKTOP_PATH = System.getProperty("user.home") + File.separator + "Desktop" + File.separator + "ds4hProjects" + File.separator;
 
     private ZipService() {}
 

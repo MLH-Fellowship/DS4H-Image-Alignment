@@ -1,11 +1,11 @@
 ## Goal of the plugin ##
 
-Align (i.e. co-register) 2D images
+Align (i.e. register) 2D images acquired using different acquisition modalities.
 
 
 ## Description ##
 
-"Data Science for Health (DS4H) Image Alignment" is a user-friendly tool freely provided as an ImageJ/Fiji plugin. With DS4H Image Alignment, 2D images can be easily aligned (i.e. co-registered) by defining with a few clicks some well visible reference marks. 
+"Data Science for Health (DS4H) Image Alignment" is a user-friendly tool freely provided as an ImageJ/Fiji plugin. With DS4H Image Alignment, 2D images can be easily aligned (i.e. registered) by defining with a few clicks some well visible reference marks, or by using automatic routines. 
 
 The implemented least-squares method automatically approximates the solution of the mathematical overdetermined system, so to define the registration matrix then used for aligning the different images. It also considers rotations and scale changes in case of object dilation/shrink. Finally, it provides an iterative subroutine for a fine alignment, to easily reach a very good image co-registration quality.
 
@@ -15,19 +15,11 @@ The implemented least-squares method automatically approximates the solution of 
 
 DS4H Image Alignment has been implemented in Java as a plugin for ImageJ/Fiji. It works with “.svs” files, but also all the medical imaging formats included in the [[Bio-formats]] library.
 
+
 ## Installation ##
 
 DS4H Image Alignment can be installed easily, on Windows and Apple Silicon M1.
 
-[Windows Version here](https://github.com/UniBoDS4H/DS4H-Image-Alignment/releases/tag/windows#:~:text=Compare-,v1.1.0,-Latest)
-
-[Apple Silicon Version here](https://github.com/UniBoDS4H/DS4H-Image-Alignment/releases/tag/mac_os_x_apple_silicon#:~:text=Compare-,v1.1.0,-Edodums%20released%20this)
-
-Download only the *.jar file and the two libraries (e.g. *.dll, *.dylib), you can ignore the other links.
-
-The jar file goes in **plugin/** folder, the other two libraries have to moved to **lib/** folder.
-
-The libraries are useful for the OpenCV functionality, hence they are **MANDATORY** to be downloaded.
 
 ## Download ##
 
@@ -67,6 +59,7 @@ Image Alignment and the material available on the Image Alignment website is lic
 
 We thanks all the University Students that helped in this project. In particular:
 
+- (2022) Marco Edoardo Duma, Bachelor's Degree Student in Computer Sciences, University of Bologna, Italy, email: edoduma93@gmail.com
 - (2019) Stefano Belli, Master's Degree Student in Computer Sciences, University of Bologna, Italy, email: stefano.belli4@studio.unibo.it
 
 

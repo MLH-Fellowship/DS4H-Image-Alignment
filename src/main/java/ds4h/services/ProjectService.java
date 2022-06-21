@@ -43,8 +43,8 @@ public class ProjectService {
         return project;
     }
 
-    public static void save(Project project, String outputPath) {
-        String xmlPath = outputPath + File.separator + "rois_with_index.xml";
+    public static void save(Project project, String imagesDir, String outputPath) {
+        String xmlPath = imagesDir + File.separator + "rois_with_index.xml";
         XMLService.create(ROIS_AND_INDEXES, "image", project, xmlPath);
         List<String> files = new ArrayList<>(project.getFilePaths());
         files.add(xmlPath);

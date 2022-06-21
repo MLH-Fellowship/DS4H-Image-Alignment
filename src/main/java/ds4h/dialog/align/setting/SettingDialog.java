@@ -12,6 +12,8 @@ package ds4h.dialog.align.setting;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ItemEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 
 public class SettingDialog extends JDialog {
   private static final String MESSAGE = "The Affine model is used by default.\n Check one of these checkboxes to change it";
@@ -31,8 +33,9 @@ public class SettingDialog extends JDialog {
     this.okButton = new JButton("OK");
     this.initCheckboxes();
   }
-  
-  public void init() {
+
+  public boolean initIsSuccessFul() {
+    final boolean[] isSuccessFul = {true};
     // add text
     this.getTextPane().setText(MESSAGE);
     this.getTextPane().setDisabledTextColor(Color.BLACK);
@@ -49,6 +52,14 @@ public class SettingDialog extends JDialog {
     this.setDefaultCloseOperation(DISPOSE_ON_CLOSE);
     this.pack();
     this.setVisible(true);
+    this.addWindowListener(new WindowAdapter() {
+      @Override
+      public void windowClosed(WindowEvent windowEvent) {
+        isSuccessFul[0] = false;
+      }
+    });
+
+    return isSuccessFul[0];
   }
   
   public SettingEvent getEvent() {

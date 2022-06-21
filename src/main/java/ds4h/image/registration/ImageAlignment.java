@@ -71,6 +71,7 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
     private static final String SINGLE_IMAGE_MESSAGE = "Only one image detected in the stack: align operation will be unavailable.";
     private static final String IMAGES_OVERSIZE_MESSAGE = "Cannot open the selected image: image exceed supported dimensions.";
     private static final String ALIGNED_IMAGE_NOT_SAVED_MESSAGE = "Aligned images not saved: are you sure you want to exit without saving?";
+    private static final String SAVE_PROJECT_TITLE_SUCCESS = "The project was successfully saved";
     private static final String DELETE_ALL_IMAGES = "Do you confirm to delete all the images of the stack?";
     private static final String IMAGE_SAVED_MESSAGE = "Image successfully saved";
     private static final String INSUFFICIENT_MEMORY_MESSAGE = "Insufficient computer memory (RAM) available. \n\n\t Try to increase the allocated memory by going to \n\n\t                Edit  ▶ Options  ▶ Memory & Threads \n\n\t Change \"Maximum Memory\" to, at most, 1000 MB less than your computer's total RAM.";
@@ -198,8 +199,9 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
         }
         project.setImagesIndexesWithRois(map);
         project.setFilePaths(this.getManager().getOriginalImageFiles().stream().map(ImageFile::getPathFile).collect(Collectors.toList()));
-        final String outputPath = getImage().getFilePath().substring(0, getImage().getFilePath().lastIndexOf(File.separator));
-        ProjectService.save(project, outputPath);
+        final String outputPath = FileService.chooseDirectory();
+        ProjectService.save(project, getImage().getFilePath().substring(0, getImage().getFilePath().lastIndexOf(File.separator)), outputPath);
+        JOptionPane.showMessageDialog(null, "The project was saved here: "+ outputPath, SAVE_PROJECT_TITLE_SUCCESS, JOptionPane.WARNING_MESSAGE);
     }
 
     private void handleMovedRoi() {
@@ -349,7 +351,6 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
         }
         this.getMainDialog().setPrevImageButtonEnabled(this.getManager().hasPrevious());
         this.getMainDialog().setNextImageButtonEnabled(this.getManager().hasNext());
-        System.out.println(this.getManager().getCurrentIndex() +  " ImageAlignment index - Method (addFile)");
         this.getMainDialog().setTitle(MessageFormat.format(MAIN_DIALOG_TITLE_PATTERN, this.getManager().getCurrentIndex() + 1, this.getManager().getNImages()));
         this.refreshRoiGUI();
     }
@@ -392,10 +393,12 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
     private void alignHandler(AbstractBuilder builder) {
         builder.setTempImages(this.tempImages);
         builder.init();
-        builder.align();
-        builder.build();
-        this.alignDialog = builder.getAlignDialog();
-        this.tempImages = builder.getTempImages();
+        if (builder.check()) {
+            builder.align();
+            builder.build();
+            this.alignDialog = builder.getAlignDialog();
+            this.tempImages = builder.getTempImages();
+        }
     }
 
     private void handleDeselectedRoi(DeselectedRoiEvent dialogEvent) {
@@ -497,7 +500,6 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
             this.getMainDialog().changeImage(this.getImage());
             this.getMainDialog().setPrevImageButtonEnabled(this.getManager().hasPrevious());
             this.getMainDialog().setNextImageButtonEnabled(this.getManager().hasNext());
-            System.out.println(this.getManager().getCurrentIndex() +  " ImageAlignment index - Method (getChangeTthreard)");
             this.getMainDialog().setTitle(MessageFormat.format(MAIN_DIALOG_TITLE_PATTERN, this.getManager().getCurrentIndex() + 1, this.getManager().getNImages()));
             this.getImage().buildMouseListener();
             this.getLoadingDialog().hideDialog();
@@ -640,7 +642,6 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
             this.mainDialog = new MainDialog(this.image, this);
             this.getMainDialog().setPrevImageButtonEnabled(this.getManager().hasPrevious());
             this.getMainDialog().setNextImageButtonEnabled(this.getManager().hasNext());
-            System.out.println(this.getManager().getCurrentIndex() +  " ImageAlignment index - Method (initialiaze)");
             this.getMainDialog().setTitle(MessageFormat.format(MAIN_DIALOG_TITLE_PATTERN, this.getManager().getCurrentIndex() + 1, this.getManager().getNImages()));
             this.getLoadingDialog().hideDialog();
             if (this.getImage().isReduced())

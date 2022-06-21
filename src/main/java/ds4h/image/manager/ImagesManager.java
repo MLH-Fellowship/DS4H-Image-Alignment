@@ -144,7 +144,6 @@ public class ImagesManager implements ListIterator<ImagePlus>, Observable {
         final BufferedImage image = imageFile.getImage(index - progressive, wholeSlide);
         image.setFilePath(imageFile.getPathFile());
         if (!isOriginal) {
-          System.out.println(index +  " Image manager index");
           image.setTitle(MessageFormat.format("Editor Image {0}/{1}", index, this.getNImages()));
         }
         return image;

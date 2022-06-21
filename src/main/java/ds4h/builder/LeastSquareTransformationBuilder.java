@@ -21,6 +21,8 @@ import ij.process.ImageProcessor;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.awt.image.ColorModel;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
@@ -57,19 +59,34 @@ public class LeastSquareTransformationBuilder extends AbstractBuilder {
     this.setSourceImage(true);
     this.setOffsets();
     this.initFinalStack();
-    this.showSettingDialog();
   }
-  
-  private void showSettingDialog() {
+
+  @Override
+  public boolean check() {
+    return isShowSettingDialogSuccessful();
+  }
+
+  /**
+   *
+   * @return if it's "successful" if it wasn't closed via X button ( yeah, I know, it's not elegant )
+   */
+  private boolean isShowSettingDialogSuccessful() {
+    JFrame frame = new JFrame();
+    frame.setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
+    final boolean[] isSuccessful = {true};
     try {
       SwingUtilities.invokeAndWait(() -> {
-        settingDialog = new SettingDialog(new JFrame(), "Align Settings", true);
+        settingDialog = new SettingDialog(frame, "Align Settings", true);
         settingDialog.getOkButton().addActionListener(e -> settingDialog.dispose());
-        settingDialog.init();
+        if (settingDialog.initIsSuccessFul()) {
+          isSuccessful[0] = false;
+        }
       });
     } catch (InterruptedException | InvocationTargetException e) {
       IJ.showMessage("Something is not right, sorry, contact the Developer");
     }
+
+    return isSuccessful[0];
   }
   
   @Override

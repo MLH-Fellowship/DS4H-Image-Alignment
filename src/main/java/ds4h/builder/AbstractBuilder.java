@@ -41,7 +41,7 @@ public abstract class AbstractBuilder {
   private Dimension maximumSize;
   private List<String> tempImages;
   
-  public AbstractBuilder(LoadingDialog loadingDialog, OnAlignDialogEventListener listener, ImagesManager manager, IMainDialogEvent event) {
+  protected AbstractBuilder(LoadingDialog loadingDialog, OnAlignDialogEventListener listener, ImagesManager manager, IMainDialogEvent event) {
     this.loadingDialog = loadingDialog;
     this.listener = listener;
     this.manager = manager;
@@ -49,6 +49,8 @@ public abstract class AbstractBuilder {
   }
   
   public abstract void init();
+
+  public abstract boolean check();
   
   public abstract void align();
   

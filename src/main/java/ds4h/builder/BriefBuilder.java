@@ -63,7 +63,12 @@ public class BriefBuilder extends AbstractBuilder {
     this.setMaximumSize(new Dimension(this.getSourceImage().width(), this.getSourceImage().height()));
     this.setVirtualStack();
   }
-  
+
+  @Override
+  public boolean check() {
+    return true;
+  }
+
   @Override
   public void align() {
     try {

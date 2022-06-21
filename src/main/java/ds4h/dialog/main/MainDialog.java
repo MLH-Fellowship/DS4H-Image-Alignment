@@ -49,8 +49,6 @@ public class MainDialog extends ImageWindow {
   private BufferedImage image;
   private boolean mouseOverCanvas;
   private Rectangle oldRect = null;
-  // a simple debounce variable that can put "on hold" a key_release event
-  private boolean debounce = false;
   private Rectangle2D.Double lastBound;
   private Roi lastRoi;
 
@@ -468,19 +466,6 @@ public class MainDialog extends ImageWindow {
         Point point = getCanvas().getCursorLoc();
         Pair<BigDecimal, BigDecimal> clickCoordinates = new Pair<>(BigDecimal.valueOf(point.getX()), BigDecimal.valueOf(point.getY()));
         eventListener.onMainDialogEvent(new AddRoiEvent(clickCoordinates));
-      }
-      if (!debounce) {
-        debounce = true;
-        new Thread(() -> {
-          try {
-            ChangeImageEvent.ChangeDirection direction;
-            direction = isReleased && e.getKeyCode() == KeyEvent.VK_A ? ChangeImageEvent.ChangeDirection.PREV : ChangeImageEvent.ChangeDirection.NEXT;
-            eventListener.onMainDialogEvent(new ChangeImageEvent(direction));
-            e.consume();
-          } catch (Exception e1) {
-            IJ.showMessage(e1.getMessage());
-          }
-        }).start();
       }
       return false;
     }

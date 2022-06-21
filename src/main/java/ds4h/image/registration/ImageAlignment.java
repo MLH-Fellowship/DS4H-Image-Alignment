@@ -349,7 +349,8 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
         }
         this.getMainDialog().setPrevImageButtonEnabled(this.getManager().hasPrevious());
         this.getMainDialog().setNextImageButtonEnabled(this.getManager().hasNext());
-        this.getMainDialog().setTitle(MessageFormat.format(MAIN_DIALOG_TITLE_PATTERN, this.getManager().getCurrentIndex(), this.getManager().getNImages()));
+        System.out.println(this.getManager().getCurrentIndex() +  " ImageAlignment index - Method (addFile)");
+        this.getMainDialog().setTitle(MessageFormat.format(MAIN_DIALOG_TITLE_PATTERN, this.getManager().getCurrentIndex() + 1, this.getManager().getNImages()));
         this.refreshRoiGUI();
     }
 
@@ -496,7 +497,8 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
             this.getMainDialog().changeImage(this.getImage());
             this.getMainDialog().setPrevImageButtonEnabled(this.getManager().hasPrevious());
             this.getMainDialog().setNextImageButtonEnabled(this.getManager().hasNext());
-            this.getMainDialog().setTitle(MessageFormat.format(MAIN_DIALOG_TITLE_PATTERN, this.getManager().getCurrentIndex(), this.getManager().getNImages()));
+            System.out.println(this.getManager().getCurrentIndex() +  " ImageAlignment index - Method (getChangeTthreard)");
+            this.getMainDialog().setTitle(MessageFormat.format(MAIN_DIALOG_TITLE_PATTERN, this.getManager().getCurrentIndex() + 1, this.getManager().getNImages()));
             this.getImage().buildMouseListener();
             this.getLoadingDialog().hideDialog();
             this.refreshRoiGUI();
@@ -573,13 +575,8 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
                 String[] buttons = {"Yes", "No"};
                 int answer = JOptionPane.showOptionDialog(null, DELETE_ALL_IMAGES, CAREFUL_NOW_TITLE, JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE, null, buttons, buttons[1]);
                 if (answer == 0) {
-                    String pathFile = this.promptForFile();
-                    if (pathFile.equals(NULL_PATH)) {
-                        this.disposeAll();
-                        return;
-                    }
-                    this.disposeAll();
-                    this.initialize(Collections.singletonList(pathFile));
+                    this.run();
+                    return;
                 }
             } else {
                 // remove the image selected
@@ -589,9 +586,13 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
             this.image = this.getManager().get(this.getManager().getCurrentIndex());
             this.originalImage = this.getManager().get(this.getManager().getCurrentIndex());
             this.getMainDialog().changeImage(this.image);
-            this.getMainDialog().setPrevImageButtonEnabled(this.getManager().hasPrevious());
-            this.getMainDialog().setNextImageButtonEnabled(this.getManager().hasNext());
-            this.getMainDialog().setTitle(MessageFormat.format(MAIN_DIALOG_TITLE_PATTERN, this.getManager().getCurrentIndex(), this.getManager().getNImages()));
+            int finalIndex = this.getManager().getCurrentIndex();
+            if (finalIndex < 1) {
+                finalIndex = 1;
+            }
+            this.getMainDialog().setPrevImageButtonEnabled(finalIndex > 1 && this.getManager().getCurrentIndex() != 0);
+            this.getMainDialog().setNextImageButtonEnabled(getManager().hasNext());
+            this.getMainDialog().setTitle(MessageFormat.format(MAIN_DIALOG_TITLE_PATTERN, finalIndex, this.getManager().getNImages()));
             this.refreshRoiGUI();
         }
     }
@@ -639,7 +640,8 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
             this.mainDialog = new MainDialog(this.image, this);
             this.getMainDialog().setPrevImageButtonEnabled(this.getManager().hasPrevious());
             this.getMainDialog().setNextImageButtonEnabled(this.getManager().hasNext());
-            this.getMainDialog().setTitle(MessageFormat.format(MAIN_DIALOG_TITLE_PATTERN, this.getManager().getCurrentIndex(), this.getManager().getNImages()));
+            System.out.println(this.getManager().getCurrentIndex() +  " ImageAlignment index - Method (initialiaze)");
+            this.getMainDialog().setTitle(MessageFormat.format(MAIN_DIALOG_TITLE_PATTERN, this.getManager().getCurrentIndex() + 1, this.getManager().getNImages()));
             this.getLoadingDialog().hideDialog();
             if (this.getImage().isReduced())
                 JOptionPane.showMessageDialog(null, IMAGES_SCALED_MESSAGE, "Info", JOptionPane.INFORMATION_MESSAGE);
@@ -690,6 +692,9 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
     public void run() {
         List<String> filePaths = new ArrayList<>(FileService.promptForFiles());
         filePaths.removeIf(filePath -> filePath.equals(NULL_PATH));
+        if (filePaths.isEmpty()) {
+            return;
+        }
         this.initialize(filePaths);
     }
 

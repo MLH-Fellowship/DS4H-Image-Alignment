@@ -1,290 +1,128 @@
 package ds4h.dialog.about;
 
-import ds4h.utils.Utilities;
-import ij.IJ;
-
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.*;
-import java.io.IOException;
-import java.net.URI;
 
 public class AboutDialog extends JDialog {
-  private JPanel contentPane;
-  private JButton buttonOK;
-  private JLabel lbl_icon;
-  private JPanel pnl_title;
-  private JLabel lbl_version;
-  private JLabel lbl_supervisors;
-  private JLabel lbl_supervisor1;
-  private JLabel lbl_supervisor2;
-  private JLabel lbl_author1;
-  private JPanel pnl_credits;
+    private final JPanel contentPane = new JPanel();
+    private final JLabel labelTitle = new JLabel();
+    private final JLabel labelVersion = new JLabel();
+    private final JLabel labelSupervisors = new JLabel();
+    private final JLabel labelSupervisor1 = new JLabel();
+    private final JLabel labelSupervisor2 = new JLabel();
+    private final JLabel labelAuthors = new JLabel();
+    private final JLabel labelAuthor1 = new JLabel();
+    private final JLabel labelAuthor2 = new JLabel();
+    private final JLabel copyright = new JLabel();
+    private final JLabel license = new JLabel();
 
-  private JPanel pnl_heads;
-  private JPanel pnl_authors;
+    public AboutDialog() {
+        this.setContentPane(this.getContentPane());
+        this.setModal(true);
+        this.setResizable(true);
+        // call onCancel() when cross is clicked
+        this.setDefaultCloseOperation(DISPOSE_ON_CLOSE);
+        this.setMinimumSize(new Dimension(500, 450));
+        this.setPreferredSize(new Dimension(500, 450));
+        this.setResizable(false);
+        this.setTitle("About...");
+        this.setLayout(new BoxLayout(this.getContentPane(), BoxLayout.Y_AXIS));
 
-  public AboutDialog() {
-    $$$setupUI$$$();
-    this.setContentPane(contentPane);
-    this.setModal(true);
-    this.getRootPane().setDefaultButton(buttonOK);
-    this.buttonOK.addActionListener(e -> onOK());
-    // call onCancel() when cross is clicked
-    this.setDefaultCloseOperation(DISPOSE_ON_CLOSE);
-    this.addWindowListener(new WindowAdapter() {
-      public void windowClosing(WindowEvent e) {
-        onCancel();
-      }
-    });
-    // call onCancel() on ESCAPE
-    this.contentPane.registerKeyboardAction(e -> onCancel(), KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
-    this.setMinimumSize(new Dimension(500, 300));
-    this.setMaximumSize(new Dimension(500, 300));
-    this.setResizable(false);
-    this.setTitle("About...");
-    this.lbl_author1.setCursor(new Cursor(Cursor.HAND_CURSOR));
-    this.lbl_supervisor1.setCursor(new Cursor(Cursor.HAND_CURSOR));
-    this.lbl_supervisor1.addMouseListener(this.createMouseListener("mailto:antonella.carbonaro@unibo.it"));
-    this.lbl_supervisor2.setCursor(new Cursor(Cursor.HAND_CURSOR));
-    this.lbl_supervisor2.addMouseListener(this.createMouseListener("mailto:f.piccinini@unibo.it"));
-  }
-  
-  @Override
-  public void setVisible(boolean visible) {
-    super.setVisible(visible);
-    if (visible) this.pack();
-  }
-  
-  private void onOK() {
-    // add your code here
-    dispose();
-  }
-  
-  private void onCancel() {
-    // add your code here if necessary
-    dispose();
-  }
-  
-  private void createUIComponents() {
-    this.lbl_icon = new JLabel();
-    ImageIcon imageIcon = null;
-    try {
-      byte[] bytes = Utilities.inputStreamToByteArray(getClass().getResourceAsStream("/info.png"));
-      imageIcon = new ImageIcon(bytes);
-    } catch (IOException e) {
-      IJ.showMessage(e.getMessage());
+        getContentPane().setBorder(BorderFactory.createEmptyBorder(16,16,16,16));
+
+        getLabelTitle().setText("DS4H Image Alignment");
+        getLabelTitle().setVisible(true);
+        getContentPane().add(getLabelTitle());
+        getContentPane().add(Box.createRigidArea(new Dimension(0,16)));
+
+        getLabelVersion().setText("v1.1");
+        getLabelVersion().setVisible(true);
+        getContentPane().add(getLabelVersion());
+        getContentPane().add(Box.createRigidArea(new Dimension(0,32)));
+
+        getLabelSupervisors().setText("Head of the Project");
+        getLabelSupervisors().setVisible(true);
+        getContentPane().add(getLabelSupervisors());
+        getContentPane().add(Box.createRigidArea(new Dimension(0,16)));
+
+        getLabelSupervisor1().setText("Prof.ssa Antonella Carbonaro - antonella.carbonaro@unibo.it");
+        getLabelSupervisor1().setVisible(true);
+        getContentPane().add(getLabelSupervisor1());
+        getContentPane().add(Box.createRigidArea(new Dimension(0,16)));
+
+        getLabelSupervisor2().setText("Prof. Filippo Piccinini - f.piccinini@unibo.it");
+        getLabelSupervisor2().setVisible(true);
+        getContentPane().add(getLabelSupervisor2());
+        getContentPane().add(Box.createRigidArea(new Dimension(0,32)));
+
+        getLabelAuthors().setText("Made By");
+        getLabelAuthors().setVisible(true);
+        getContentPane().add(getLabelAuthors());
+        getContentPane().add(Box.createRigidArea(new Dimension(0,16)));
+
+        getLabelAuthor2().setText("Marco Edoardo Duma - marcoedoardo.duma@studio.unibo.it");
+        getLabelAuthor2().setVisible(true);
+        getContentPane().add(getLabelAuthor2());
+        getContentPane().add(Box.createRigidArea(new Dimension(0,16)));
+
+        getLabelAuthor1().setText("Stefano Belli - stefano.belli4@studio.unibo.it");
+        getLabelAuthor1().setVisible(true);
+        getContentPane().add(getLabelAuthor1());
+        getContentPane().add(Box.createRigidArea(new Dimension(0,32)));
+
+        getCopyright().setText("Copyright (©) 2019 Data Science for Health (DS4H) Group. All rights reserved");
+        getCopyright().setVisible(true);
+        getContentPane().add(getCopyright());
+        getContentPane().add(Box.createRigidArea(new Dimension(0,16)));
+
+        getLicense().setText("License: GNU General Public License version 3");
+        getLicense().setVisible(true);
+        getContentPane().add(getLicense());
+
     }
-    assert imageIcon != null;
-    Image image = imageIcon.getImage(); // transform it
-    Image newimg = image.getScaledInstance(40, 40, Image.SCALE_SMOOTH); // scale it the smooth way
-    imageIcon = new ImageIcon(newimg);  // transform it back
-    this.lbl_icon.setIcon(imageIcon);
-    this.pnl_title = new JPanel();
-    this.pnl_title.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, Color.LIGHT_GRAY));
-    this.lbl_version = new JLabel();
-    this.lbl_version.setText("About");
-    JLabel lbl_credits = new JLabel();
-    lbl_credits.setText("<html><body>Made first by Stefano Belli then by Marco Edoardo Duma<br>With the supervision of: Prof. Antonella Carbonaro && Prof. Alberto Piccinini</body></html>");
-    this.pnl_credits = new JPanel();
-    this.pnl_credits.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, Color.LIGHT_GRAY));
-  }
-  
-  /**
-   * Method generated by IntelliJ IDEA GUI Designer
-   * >>> IMPORTANT!! <<<
-   * DO NOT edit this method OR call it in your code!
-   *
-   * @noinspection ALL
-   */
-  private void $$$setupUI$$$() {
-    createUIComponents();
-    this.contentPane = new JPanel();
-    this.contentPane.setLayout(new GridBagLayout());
-    this.contentPane.setMaximumSize(new Dimension(500, 200));
-    this.contentPane.setMinimumSize(new Dimension(500, 200));
-    this.contentPane.setPreferredSize(new Dimension(500, 200));
-    final JPanel panel1 = new JPanel();
-    panel1.setLayout(new BorderLayout(0, 0));
-    panel1.setMaximumSize(new Dimension(412, 30));
-    GridBagConstraints gbc;
-    gbc = new GridBagConstraints();
-    gbc.gridx = 0;
-    gbc.gridy = 1;
-    gbc.weightx = 1.0;
-    gbc.fill = GridBagConstraints.BOTH;
-    gbc.insets = new Insets(10, 10, 10, 10);
-    contentPane.add(panel1, gbc);
-    final JPanel panel2 = new JPanel();
-    panel2.setLayout(new BorderLayout(0, 5));
-    panel2.setAlignmentY(0.5f);
-    panel1.add(panel2, BorderLayout.CENTER);
-    final JLabel label1 = new JLabel();
-    label1.setHorizontalAlignment(10);
-    label1.setText("Copyright (©) 2019 Data Science for Health (DS4H) Group. All rights reserved");
-    panel2.add(label1, BorderLayout.NORTH);
-    final JLabel label2 = new JLabel();
-    label2.setAlignmentY(1.0f);
-    label2.setHorizontalAlignment(10);
-    label2.setText("License: GNU General Public License version 3");
-    panel2.add(label2, BorderLayout.SOUTH);
-    final JPanel panel3 = new JPanel();
-    panel3.setLayout(new FlowLayout(FlowLayout.RIGHT, 0, 0));
-    panel1.add(panel3, BorderLayout.EAST);
-    this.buttonOK = new JButton();
-    this.buttonOK.setAlignmentY(1.0f);
-    this.buttonOK.setBorderPainted(true);
-    this.buttonOK.setContentAreaFilled(true);
-    this.buttonOK.setHorizontalTextPosition(0);
-    this.buttonOK.setMargin(new Insets(0, 0, 0, 0));
-    this.buttonOK.setMaximumSize(new Dimension(78, 35));
-    this.buttonOK.setMinimumSize(new Dimension(78, 35));
-    this.buttonOK.setPreferredSize(new Dimension(78, 35));
-    this.buttonOK.setText("CLOSE");
-    this.buttonOK.setVerticalAlignment(0);
-    panel3.add(buttonOK);
-    final JPanel panel4 = new JPanel();
-    panel4.setLayout(new GridBagLayout());
-    panel4.setMaximumSize(new Dimension(500, 140));
-    gbc = new GridBagConstraints();
-    gbc.gridx = 0;
-    gbc.gridy = 0;
-    gbc.weightx = 1.0;
-    gbc.weighty = 1.0;
-    gbc.fill = GridBagConstraints.BOTH;
-    gbc.insets = new Insets(10, 10, 0, 10);
-    this.contentPane.add(panel4, gbc);
-    this.pnl_title.setLayout(new GridBagLayout());
-    this.pnl_title.setBackground(new Color(-1512467));
-    this.pnl_title.setMaximumSize(new Dimension(515, 20));
-    gbc = new GridBagConstraints();
-    gbc.gridx = 0;
-    gbc.gridy = 0;
-    gbc.gridwidth = 2;
-    gbc.weightx = 1.0;
-    gbc.weighty = 0.15;
-    gbc.fill = GridBagConstraints.BOTH;
-    panel4.add(pnl_title, gbc);
-    this.lbl_icon.setText("");
-    gbc = new GridBagConstraints();
-    gbc.gridx = 1;
-    gbc.gridy = 0;
-    gbc.weightx = 1.0;
-    gbc.weighty = 1.0;
-    gbc.anchor = GridBagConstraints.EAST;
-    this.pnl_title.add(this.lbl_icon, gbc);
-    this.lbl_version = new JLabel();
-    this.lbl_version.setAlignmentX(0.0f);
-    this.lbl_version.setAlignmentY(1.0f);
-    this.lbl_version.setText("v. 2.0.0");
-    gbc = new GridBagConstraints();
-    gbc.gridx = 0;
-    gbc.gridy = 1;
-    gbc.weightx = 1.0;
-    gbc.weighty = 1.0;
-    gbc.anchor = GridBagConstraints.SOUTH;
-    gbc.fill = GridBagConstraints.HORIZONTAL;
-    this.pnl_title.add(this.lbl_version, gbc);
-    final JLabel label3 = new JLabel();
-    label3.setForeground(new Color(-16777216));
-    label3.setText("DS4H Image Aligment");
-    gbc = new GridBagConstraints();
-    gbc.gridx = 0;
-    gbc.gridy = 0;
-    gbc.weightx = 1.0;
-    gbc.weighty = 1.0;
-    gbc.anchor = GridBagConstraints.WEST;
-    this.pnl_title.add(label3, gbc);
-    this.pnl_credits.setLayout(new GridBagLayout());
-    this.pnl_credits.setMaximumSize(new Dimension(138, 50));
-    this.pnl_credits.setMinimumSize(new Dimension(138, 50));
-    this.pnl_credits.setOpaque(false);
-    this.pnl_credits.setPreferredSize(new Dimension(138, 50));
-    gbc = new GridBagConstraints();
-    gbc.gridx = 0;
-    gbc.gridy = 1;
-    gbc.gridwidth = 2;
-    gbc.weightx = 1.0;
-    gbc.weighty = 1.0;
-    gbc.fill = GridBagConstraints.BOTH;
-    gbc.insets = new Insets(10, 5, 0, 5);
-    panel4.add(this.pnl_credits, gbc);
-    lbl_supervisors = new JLabel();
-    lbl_supervisors.setText("Head of the project");
-    gbc = new GridBagConstraints();
-    gbc.gridx = 0;
-    gbc.gridy = 2;
-    gbc.weightx = 1.0;
-    gbc.fill = GridBagConstraints.HORIZONTAL;
-    gbc.insets = new Insets(10, 0, 0, 0);
-    this.pnl_credits.add(lbl_supervisors, gbc);
-    pnl_heads = new JPanel();
-    pnl_heads.setLayout(new GridBagLayout());
-    pnl_heads.setMaximumSize(new Dimension(56, 32));
-    gbc = new GridBagConstraints();
-    gbc.gridx = 0;
-    gbc.gridy = 3;
-    gbc.weightx = 1.0;
-    gbc.weighty = 1.0;
-    gbc.fill = GridBagConstraints.BOTH;
-    this.pnl_credits.add(pnl_heads, gbc);
-    this.lbl_supervisor1 = new JLabel();
-    this.lbl_supervisor1.setText("<html><a href=\\\"\\\">Prof. Antonella Carbonaro</a></html>");
-    gbc = new GridBagConstraints();
-    gbc.gridx = 0;
-    gbc.gridy = 0;
-    gbc.weightx = 1.0;
-    gbc.weighty = 1.0;
-    gbc.fill = GridBagConstraints.HORIZONTAL;
-    pnl_heads.add(lbl_supervisor1, gbc);
-    this.lbl_supervisor2 = new JLabel();
-    this.lbl_supervisor2.setText("<html><body><a href=\\\"\\\">Prof. Filippo Piccinini <a/></body></html>");
-    gbc = new GridBagConstraints();
-    gbc.gridx = 0;
-    gbc.gridy = 1;
-    gbc.weightx = 1.0;
-    gbc.weighty = 1.0;
-    gbc.anchor = GridBagConstraints.WEST;
-    pnl_heads.add(this.lbl_supervisor2, gbc);
-    pnl_authors = new JPanel();
-    pnl_authors.setLayout(new GridBagLayout());
-    pnl_authors.setMaximumSize(new Dimension(40, 48));
-    gbc = new GridBagConstraints();
-    gbc.gridx = 0;
-    gbc.gridy = 0;
-    gbc.weightx = 1.0;
-    gbc.weighty = 0.5;
-    gbc.fill = GridBagConstraints.BOTH;
-    this.pnl_credits.add(pnl_authors, gbc);
-    this.lbl_author1 = new JLabel();
-    this.lbl_author1.setText("<html><body><a href=\"mailto:stefano.belli4@studio.unibo.it\">Stefano Belli<a/><br><a href=\"mailto:marcoedoardo.duma@studio.unibo.it\">Marco Edoardo Duma<a/></body></html>");
-    gbc = new GridBagConstraints();
-    gbc.gridx = 0;
-    gbc.gridy = 0;
-    gbc.weightx = 1.0;
-    gbc.weighty = 1.0;
-    gbc.fill = GridBagConstraints.HORIZONTAL;
-    pnl_authors.add(this.lbl_author1, gbc);
-  }
-  
-  /**
-   * @noinspection ALL
-   */
-  public JComponent $$$getRootComponent$$$() {
-    return contentPane;
-  }
-  
-  private MouseAdapter createMouseListener(String mailTo) {
-    return new MouseAdapter() {
-      @Override
-      public void mouseClicked(MouseEvent e) {
-        super.mouseClicked(e);
-        try {
-          Desktop.getDesktop().mail(new URI(mailTo));
-        } catch (Exception ex) {
-          IJ.showMessage(ex.getMessage());
-        }
-      }
-    };
-  }
+
+    @Override
+    public JPanel getContentPane() {
+        return contentPane;
+    }
+
+    public JLabel getLabelAuthors() {
+        return labelAuthors;
+    }
+
+    public JLabel getLicense() {
+        return license;
+    }
+
+    public JLabel getCopyright() {
+        return copyright;
+    }
+
+    public JLabel getLabelTitle() {
+        return labelTitle;
+    }
+
+    public JLabel getLabelVersion() {
+        return labelVersion;
+    }
+
+    public JLabel getLabelSupervisors() {
+        return labelSupervisors;
+    }
+
+    public JLabel getLabelSupervisor1() {
+        return labelSupervisor1;
+    }
+
+    public JLabel getLabelSupervisor2() {
+        return labelSupervisor2;
+    }
+
+    public JLabel getLabelAuthor1() {
+        return labelAuthor1;
+    }
+
+    public JLabel getLabelAuthor2() {
+        return labelAuthor2;
+    }
 }

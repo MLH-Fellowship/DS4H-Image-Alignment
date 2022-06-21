@@ -70,7 +70,6 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
     private static final String IMAGES_SCALED_MESSAGE = "Image size too large: image has been scaled for compatibility.";
     private static final String SINGLE_IMAGE_MESSAGE = "Only one image detected in the stack: align operation will be unavailable.";
     private static final String IMAGES_OVERSIZE_MESSAGE = "Cannot open the selected image: image exceed supported dimensions.";
-    private static final String ALIGNED_IMAGE_NOT_SAVED_MESSAGE = "Aligned images not saved: are you sure you want to exit without saving?";
     private static final String SAVE_PROJECT_TITLE_SUCCESS = "The project was successfully saved";
     private static final String DELETE_ALL_IMAGES = "Do you confirm to delete all the images of the stack?";
     private static final String IMAGE_SAVED_MESSAGE = "Image successfully saved";
@@ -95,7 +94,6 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
     private LoadingDialog loadingDialog;
     private AboutDialog aboutDialog;
     private RemoveImageDialog removeImageDialog;
-    private boolean alignedImageSaved = false;
     private long totalMemory = 0;
 
     static {
@@ -559,7 +557,6 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
             new FileSaver(this.getAlignDialog().getImagePlus()).saveAsTiff(path);
             this.getLoadingDialog().hideDialog();
             JOptionPane.showMessageDialog(null, IMAGE_SAVED_MESSAGE, "Save complete", JOptionPane.INFORMATION_MESSAGE);
-            this.alignedImageSaved = true;
         }
 
         if (dialogEvent instanceof ReuseImageEvent) {
@@ -631,7 +628,6 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
         this.aboutDialog = new AboutDialog();
         this.loadingDialog = new LoadingDialog();
         this.getLoadingDialog().showDialog();
-        this.alignedImageSaved = false;
         try {
             for (String filePath : filePaths) {
                 this.showIfMemoryIsInsufficient(filePath);
@@ -667,14 +663,6 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
             this.run();
         }
     }
-
-    private String promptForFile() {
-        OpenDialog od = new OpenDialog("Select an image");
-        String dir = od.getDirectory();
-        String name = od.getFileName();
-        return (dir + name);
-    }
-
     /**
      * Dispose all the opened workload objects.
      */

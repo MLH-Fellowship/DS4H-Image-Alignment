@@ -54,7 +54,7 @@ public class ProjectDialog extends JPanel implements ActionListener {
     }
 
     private void frameSetup() {
-        this.getFrame().setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        this.getFrame().setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         //Create and set up the content pane.
         this.setOpaque(true); //content panes must be opaque
         this.getFrame().setContentPane(this);

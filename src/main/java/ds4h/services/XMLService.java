@@ -1,6 +1,7 @@
 package ds4h.services;
 
 import ds4h.image.model.Project;
+import ds4h.image.model.ProjectRoi;
 import ds4h.utils.Pair;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -12,7 +13,9 @@ import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.transform.*;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerException;
+import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import java.io.File;
@@ -21,77 +24,77 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.math.BigDecimal;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
+
+import static javax.xml.parsers.DocumentBuilderFactory.newInstance;
 
 
 public class XMLService {
-    private XMLService() {}
+    private XMLService() {
+    }
 
     /**
      * I'm sorry, but I don't have time now to create a Builder, something like that would be a better solution
+     *
      * @param rootElementName
      * @param childName
      * @param project
      * @param fileOutputPath
      */
     public static void create(String rootElementName, String childName, Project project, String fileOutputPath) {
-        DocumentBuilderFactory docFactory = DocumentBuilderFactory.newInstance();
-        DocumentBuilder docBuilder;
+        DocumentBuilderFactory docFactory = newInstance();
+        DocumentBuilder docBuilder = null;
         try {
             docBuilder = docFactory.newDocumentBuilder();
         } catch (ParserConfigurationException e) {
-            throw new RuntimeException(e);
+            e.printStackTrace();
+        }
+        if (docBuilder == null) {
+            return;
         }
         Document doc = docBuilder.newDocument();
         Element rootElement = doc.createElement(rootElementName);
         doc.appendChild(rootElement);
-        project.getImagesIndexesWithRois()
-            .entrySet()
-            .stream()
-            .collect(
-                Collectors.groupingBy(
-                    Map.Entry::getValue,
-                    Collectors.mapping(Map.Entry::getKey, Collectors.toList())
-                )
-            )
-            .forEach((index, listOfPoints) -> {
-                Element childElement = doc.createElement(childName);
-                rootElement.appendChild(childElement);
-                childElement.setAttribute("id", index.toString());
-                childElement.setAttribute("filePath", project.getFilePaths().get(index));
-                for (int roiIndex = 0; roiIndex < listOfPoints.size(); roiIndex++) {
-                    Pair<BigDecimal, BigDecimal> points = listOfPoints.get(roiIndex);
-                    Element roiIndexElement = doc.createElement("roiIndex");
-                    roiIndexElement.setAttribute("id", String.valueOf(roiIndex));
-                    Element x = doc.createElement("x");
-                    Element y = doc.createElement("y");
-                    x.setTextContent(points.getX().toString());
-                    y.setTextContent(points.getY().toString());
-                    roiIndexElement.appendChild(x);
-                    roiIndexElement.appendChild(y);
-                    childElement.appendChild(roiIndexElement);
-                }
-        });
+
+        project.getProjectRois()
+                .stream()
+                .collect(Collectors.groupingBy(ProjectRoi::getPathFile))
+                .forEach((pathFile, projectRoiList) -> {
+                    Element childElement = doc.createElement(childName);
+                    rootElement.appendChild(childElement);
+                    childElement.setAttribute("filePath", pathFile);
+                    projectRoiList.forEach(projectRoi -> {
+                        Element roiIndexElement = doc.createElement("roiIndex");
+                        roiIndexElement.setAttribute("id", String.valueOf(projectRoi.getRoiIndex()));
+                        Element x = doc.createElement("x");
+                        Element y = doc.createElement("y");
+                        x.setTextContent(projectRoi.getPoint().getX().toString());
+                        y.setTextContent(projectRoi.getPoint().getY().toString());
+                        roiIndexElement.appendChild(x);
+                        roiIndexElement.appendChild(y);
+                        childElement.appendChild(roiIndexElement);
+                    });
+                });
         try (FileOutputStream output = new FileOutputStream(fileOutputPath)) {
             writeXml(doc, output);
-        } catch (IOException e) {
+        } catch (IOException | TransformerException e) {
             e.printStackTrace();
-        } catch (TransformerException e) {
-            throw new RuntimeException(e);
         }
     }
 
+
     /**
-     * write doc to output stream
-     * @param doc
-     * @param output
+     * @param doc    write to
+     * @param output stream
      * @throws TransformerException
      */
     private static void writeXml(Document doc, OutputStream output) throws TransformerException {
         TransformerFactory transformerFactory = TransformerFactory.newInstance();
+        // to be compliant, prohibit the use of all protocols by external entities:
+        transformerFactory.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "");
+        transformerFactory.setAttribute(XMLConstants.ACCESS_EXTERNAL_STYLESHEET, "");
         Transformer transformer = transformerFactory.newTransformer();
         DOMSource source = new DOMSource(doc);
         StreamResult result = new StreamResult(output);
@@ -102,9 +105,17 @@ public class XMLService {
     public static Project loadProject(String filePath) {
         Project project = new Project();
         List<String> filePaths = new ArrayList<>();
-        Map<Pair<BigDecimal, BigDecimal>, Integer> map = new HashMap<>();
-        DocumentBuilderFactory docFactory = DocumentBuilderFactory.newInstance();
+        List<ProjectRoi> projectRois = new ArrayList<>();
+        DocumentBuilderFactory docFactory = newInstance();
+        // to be compliant, completely disable DOCTYPE declaration:
         try {
+            docFactory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+            // or completely disable external entities declarations:
+            docFactory.setFeature("http://xml.org/sax/features/external-general-entities", false);
+            docFactory.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
+            // or disable entity expansion but keep in mind that this doesn't prevent fetching external entities
+            // and this solution is not correct for OpenJDK < 13 due to a bug: https://bugs.openjdk.java.net/browse/JDK-8206132
+            docFactory.setExpandEntityReferences(false);
             docFactory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
             // parse XML file
             DocumentBuilder db = docFactory.newDocumentBuilder();
@@ -115,7 +126,6 @@ public class XMLService {
                 Node imageNode = images.item(imageNodeIndex);
                 if (imageNode.getNodeType() == Node.ELEMENT_NODE) {
                     Element imageElement = (Element) imageNode;
-                    String imageIndex = imageElement.getAttribute("id");
                     String imageFilePath = imageElement.getAttribute("filePath");
                     filePaths.add(imageFilePath);
                     NodeList roiIndexes = imageElement.getElementsByTagName("roiIndex");
@@ -125,7 +135,11 @@ public class XMLService {
                             Element roiElement = (Element) roiNode;
                             BigDecimal x = BigDecimal.valueOf(Double.parseDouble(roiElement.getElementsByTagName("x").item(0).getTextContent()));
                             BigDecimal y = BigDecimal.valueOf(Double.parseDouble(roiElement.getElementsByTagName("y").item(0).getTextContent()));
-                            map.put(new Pair<>(x, y), Integer.valueOf(imageIndex));
+                            ProjectRoi projectRoi = new ProjectRoi();
+                            projectRoi.setPoint(new Pair<>(x, y));
+                            projectRoi.setFilePath(imageFilePath);
+                            projectRoi.setRoiIndex(Integer.parseInt(((Element) roiNode).getAttribute("id")));
+                            projectRois.add(projectRoi);
                         }
                     }
                 }
@@ -134,7 +148,7 @@ public class XMLService {
             e.printStackTrace();
         }
         project.setFilePaths(filePaths);
-        project.setImagesIndexesWithRois(map);
+        project.setProjectRois(projectRois);
         return project;
     }
 }

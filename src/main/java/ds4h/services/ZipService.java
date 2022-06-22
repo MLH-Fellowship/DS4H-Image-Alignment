@@ -1,7 +1,12 @@
 package ds4h.services;
 
 
-import java.io.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -13,22 +18,16 @@ import java.util.zip.ZipOutputStream;
 import static ds4h.services.FileService.newFile;
 
 public class ZipService {
-    private static final String DESKTOP_PATH = System.getProperty("user.home") + File.separator + "Desktop" + File.separator + "ds4hProjects" + File.separator;
 
-    private ZipService() {}
+    private ZipService() {
+    }
 
     public static File extract(String filePath) {
-        File destDir = new File(DESKTOP_PATH + getToday() + File.separator);
+        String dirPath = filePath.substring(0, filePath.length() - 4);
+        File destDir = new File(dirPath + File.separator);
         byte[] buffer = new byte[1024];
-        ZipInputStream zis;
-        try {
-            zis = new ZipInputStream(new FileInputStream(filePath));
-        } catch (FileNotFoundException e) {
-            throw new RuntimeException(e);
-        }
-        ZipEntry zipEntry;
-        try {
-            zipEntry = zis.getNextEntry();
+        try (ZipInputStream zis = new ZipInputStream(Files.newInputStream(Paths.get(filePath)))) {
+            ZipEntry zipEntry = zis.getNextEntry();
             while (zipEntry != null) {
                 File newFile = newFile(destDir, zipEntry);
                 if (zipEntry.isDirectory()) {
@@ -42,19 +41,18 @@ public class ZipService {
                         throw new IOException("Failed to create directory " + parent);
                     }
                     // write file content
-                    FileOutputStream fos = new FileOutputStream(newFile);
-                    int len;
-                    while ((len = zis.read(buffer)) > 0) {
-                        fos.write(buffer, 0, len);
+                    try (FileOutputStream fos = new FileOutputStream(newFile)) {
+                        int len;
+                        while ((len = zis.read(buffer)) > 0) {
+                            fos.write(buffer, 0, len);
+                        }
                     }
-                    fos.close();
                 }
                 zipEntry = zis.getNextEntry();
             }
             zis.closeEntry();
-            zis.close();
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            e.printStackTrace();
         }
         return destDir;
     }
@@ -67,40 +65,25 @@ public class ZipService {
     public static void zipIt(String dirPath, List<String> files) {
         String dirName = dirPath + File.separator + getToday() + ".zip";
         List<String> srcFiles = new ArrayList<>(files);
-        FileOutputStream fos;
         try {
-            fos = new FileOutputStream(dirName);
-        } catch (FileNotFoundException e) {
-            throw new RuntimeException(e);
-        }
-        ZipOutputStream zipOut = new ZipOutputStream(fos);
-        for (String srcFile : srcFiles) {
-            File fileToZip = new File(srcFile);
-            FileInputStream fis;
-            try {
-                fis = new FileInputStream(fileToZip);
-            } catch (FileNotFoundException e) {
-                throw new RuntimeException(e);
-            }
-            ZipEntry zipEntry = new ZipEntry(fileToZip.getName());
-            try {
-                zipOut.putNextEntry(zipEntry);
-                byte[] bytes = new byte[1024];
-                int length;
-                while((length = fis.read(bytes)) >= 0) {
-                    zipOut.write(bytes, 0, length);
+            FileOutputStream fos = new FileOutputStream(dirName);
+            try (ZipOutputStream zipOut = new ZipOutputStream(fos)) {
+                for (String srcFile : srcFiles) {
+                    File fileToZip = new File(srcFile);
+                    try (FileInputStream fis = new FileInputStream(fileToZip)) {
+                        ZipEntry zipEntry = new ZipEntry(fileToZip.getName());
+                        zipOut.putNextEntry(zipEntry);
+                        byte[] bytes = new byte[1024];
+                        int length;
+                        while ((length = fis.read(bytes)) >= 0) {
+                            zipOut.write(bytes, 0, length);
+                        }
+                    }
                 }
-                fis.close();
-            } catch (IOException e) {
-                throw new RuntimeException(e);
             }
-
-        }
-        try {
-            zipOut.close();
             fos.close();
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            e.printStackTrace();
         }
     }
 }

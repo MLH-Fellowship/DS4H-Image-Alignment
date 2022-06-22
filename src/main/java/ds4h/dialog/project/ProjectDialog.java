@@ -97,7 +97,7 @@ public class ProjectDialog extends JPanel implements ActionListener {
             return;
         }
         this.getImageAlignment().initialize(project.getFilePaths());
-        this.getImageAlignment().applyCorners(project.getImagesIndexesWithRois());
+        this.getImageAlignment().applyCorners(project.getProjectRois());
     }
 
     private void run() {

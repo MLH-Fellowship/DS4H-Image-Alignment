@@ -34,6 +34,7 @@ import ds4h.image.buffered.BufferedImage;
 import ds4h.image.manager.ImagesManager;
 import ds4h.image.model.ImageFile;
 import ds4h.image.model.Project;
+import ds4h.image.model.ProjectRoi;
 import ds4h.services.FileService;
 import ds4h.services.ProjectService;
 import ds4h.services.loader.Loader;
@@ -46,7 +47,6 @@ import ij.gui.OvalRoi;
 import ij.gui.Overlay;
 import ij.gui.Roi;
 import ij.io.FileSaver;
-import ij.io.OpenDialog;
 import ij.io.SaveDialog;
 import ij.plugin.frame.RoiManager;
 import loci.common.enumeration.EnumException;
@@ -84,6 +84,11 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
     private static final String TOO_FEW_CORNER_POINTS = "Remember that if you want to align via corners, you should have the same numbers of Corners for each image, and they should be at least 3";
     private static final String DELETE_COMMAND = "Delete";
 
+    static {
+        Loader loader = new Loader();
+        loader.load();
+    }
+
     private List<String> tempImages = new ArrayList<>();
     private ImagesManager manager;
     private BufferedImage image = null;
@@ -95,11 +100,6 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
     private AboutDialog aboutDialog;
     private RemoveImageDialog removeImageDialog;
     private long totalMemory = 0;
-
-    static {
-        Loader loader = new Loader();
-        loader.load();
-    }
 
     @Override
     public void onMainDialogEvent(IMainDialogEvent dialogEvent) {
@@ -179,27 +179,37 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
         // load new one
         this.initialize(project.getFilePaths());
         // set rois for roiManagers
-        this.applyCorners(project.getImagesIndexesWithRois());
+        this.applyCorners(project.getProjectRois());
     }
 
     private void saveProject() {
         final Project project = new Project();
-        final Map<Pair<BigDecimal, BigDecimal>, Integer> map = new HashMap<>();
-        List<RoiManager> roiManagers = this.getManager().getRoiManagers();
-        for (int index = 0; index < roiManagers.size(); index++) {
-            RoiManager roiManager = roiManagers.get(index);
-            int finalIndex = index;
-            Arrays.stream(roiManager.getRoisAsArray()).forEachOrdered(roi -> {
-                final BigDecimal x = BigDecimal.valueOf(roi.getRotationCenter().xpoints[0]);
-                final BigDecimal y = BigDecimal.valueOf(roi.getRotationCenter().ypoints[0]);
-                map.put(new Pair<>(x, y), finalIndex);
-            });
+        final List<ProjectRoi> projectRois = new ArrayList<>();
+        List<ImageFile> originalImageFiles = this.getManager().getOriginalImageFiles();
+        for (ImageFile originalImageFile : originalImageFiles) {
+            List<RoiManager> roiManagerList = originalImageFile.getRoiManagers();
+            for (RoiManager roiManager : roiManagerList) {
+                Roi[] roisAsArray = roiManager.getRoisAsArray();
+                for (int roiIndex = 0; roiIndex < roisAsArray.length; roiIndex++) {
+                    Roi roi = roisAsArray[roiIndex];
+                    final BigDecimal x = BigDecimal.valueOf(roi.getRotationCenter().xpoints[0]);
+                    final BigDecimal y = BigDecimal.valueOf(roi.getRotationCenter().ypoints[0]);
+                    final ProjectRoi projectRoi = new ProjectRoi();
+                    projectRoi.setPoint(new Pair<>(x, y));
+                    projectRoi.setRoiIndex(roiIndex);
+                    projectRoi.setFilePath(originalImageFile.getPathFile());
+                    projectRois.add(projectRoi);
+                }
+            }
         }
-        project.setImagesIndexesWithRois(map);
+        project.setProjectRois(projectRois);
         project.setFilePaths(this.getManager().getOriginalImageFiles().stream().map(ImageFile::getPathFile).collect(Collectors.toList()));
         final String outputPath = FileService.chooseDirectory();
+        if (outputPath.isEmpty()) {
+            return;
+        }
         ProjectService.save(project, getImage().getFilePath().substring(0, getImage().getFilePath().lastIndexOf(File.separator)), outputPath);
-        JOptionPane.showMessageDialog(null, "The project was saved here: "+ outputPath, SAVE_PROJECT_TITLE_SUCCESS, JOptionPane.WARNING_MESSAGE);
+        JOptionPane.showMessageDialog(null, "The project was saved here: " + outputPath, SAVE_PROJECT_TITLE_SUCCESS, JOptionPane.WARNING_MESSAGE);
     }
 
     private void handleMovedRoi() {
@@ -217,13 +227,40 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
         }, 20);
     }
 
-    public void applyCorners(Map<Pair<BigDecimal, BigDecimal>, Integer> imagesIndexesWithRois) {
-        imagesIndexesWithRois.forEach((point, index) -> {
-            final int roiSize = (int) (Math.max(Toolkit.getDefaultToolkit().getScreenSize().width, this.getImage().getWidth()) * 0.03);
-            final OvalRoi outer = new OvalRoi(point.getX().doubleValue() - ((double) roiSize / 2), point.getY().doubleValue() - ((double) roiSize / 2), roiSize, roiSize);
-            this.getManager().get(index).getManager().addRoi(outer);
+    public void applyCorners(List<ProjectRoi> projectRois) {
+        Comparator<ProjectRoi> comparator = Comparator.comparing(ProjectRoi::getRoiIndex);
+        projectRois.stream().collect(Collectors.groupingBy(ProjectRoi::getPathFile)).forEach((pathFile, projectRoiList) -> {
+            final int imageIndex = getImageIndexByFilePath(pathFile);
+            final BufferedImage imageTemp = this.getManager().get(imageIndex);
+            final BufferedImage originalImageTemp = this.getManager().getOriginal(imageIndex, false);
+            projectRoiList.stream().sorted(comparator).forEach(projectRoi -> {
+                // Code duplication ( like everywhere in the project, sorry I don't have time )
+                final int roiSize = (int) (Math.max(Toolkit.getDefaultToolkit().getScreenSize().width, this.getImage().getWidth()) * 0.03);
+                final Pair<BigDecimal, BigDecimal> point = projectRoi.getPoint();
+                final OvalRoi outer = new OvalRoi(point.getX().doubleValue() - ((double) roiSize / 2), point.getY().doubleValue() - ((double) roiSize / 2), roiSize, roiSize);
+                final Overlay over = createOverlay(imageTemp.getWidth());
+                final int strokeWidth = Math.max((int) (imageTemp.getWidth() * 0.0025), 3);
+                Arrays.stream(imageTemp.getManager().getRoisAsArray()).forEach(over::add);
+                over.add(outer);
+                outer.setStrokeColor(Color.CYAN);
+                outer.setStrokeWidth(strokeWidth);
+                outer.setImage(imageTemp);
+                imageTemp.getManager().addRoi(outer);
+                imageTemp.getManager().setOverlay(over);
+                originalImageTemp.getManager().setOverlay(over);
+                this.refreshRoiGUI();
+            });
         });
-        this.refreshRoiGUI();
+    }
+
+    private int getImageIndexByFilePath(String pathFile) {
+        return IntStream.range(0, this.getManager().getImageFiles().size())
+                .filter(i -> {
+                    final String pathFileSub = pathFile.substring(pathFile.lastIndexOf(File.separator) + 1);
+                    return this.getManager().getImageFiles().get(i).getPathFile().endsWith(pathFileSub);
+                })
+                .findFirst()
+                .orElse(-1);
     }
 
     private void copyCorners() {
@@ -249,10 +286,8 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
         int n = JOptionPane.showOptionDialog(new JFrame(), optionList, "Copy from", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE, null, new Object[]{"Copy", "Cancel"}, JOptionPane.YES_OPTION);
         if (n == JOptionPane.YES_OPTION) {
             BufferedImage chosenImage = this.getManager().get(optionList.getSelectedIndex());
-            double ratioOfChosenImage = this.getImageRatio(chosenImage);
-            double ratioOfCurrentImage = this.getImageRatio(this.getImage());
             RoiManager selectedManager = this.getManager().getRoiManagers().get(imageIndexes.get(optionList.getSelectedIndex()));
-            Map<Integer, Pair<BigDecimal, BigDecimal>> roiPoints = this.handleRoiInNewImage(roisOfCurrentImage, ratioOfChosenImage, ratioOfCurrentImage, selectedManager);
+            Map<Integer, Pair<BigDecimal, BigDecimal>> roiPoints = this.handleRoiInNewImage(roisOfCurrentImage, selectedManager);
             // I'll definitely have to refactor all this duplicated code hanging around
             if (!roiPoints.isEmpty()) {
                 this.handleRoiPointsThatWereNotAdded(chosenImage, roiPoints);
@@ -262,23 +297,23 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
         }
     }
 
-    private Map<Integer, Pair<BigDecimal, BigDecimal>> handleRoiInNewImage(Roi[] roisOfCurrentImage, double ratioOfChosenImage, double ratioOfCurrentImage, RoiManager selectedManager) {
+    private Map<Integer, Pair<BigDecimal, BigDecimal>> handleRoiInNewImage(Roi[] roisOfCurrentImage, RoiManager selectedManager) {
         Map<Integer, Pair<BigDecimal, BigDecimal>> roiPoints = new HashMap<>();
         Roi[] rois = selectedManager.getRoisAsArray();
-        for (int index = 0; index < rois.length; index++) {
+        IntStream.range(0, rois.length).forEach(index -> {
             final Roi roi = rois[index];
             final BigDecimal x = BigDecimal.valueOf(roi.getRotationCenter().xpoints[0]);
             final BigDecimal y = BigDecimal.valueOf(roi.getRotationCenter().ypoints[0]);
-            Pair<BigDecimal, BigDecimal> point = this.convertPointRatio(new Pair<>(x, y), ratioOfChosenImage, ratioOfCurrentImage);
+            Pair<BigDecimal, BigDecimal> point = new Pair<>(x, y);
             if (this.isAlreadyThere(point, roisOfCurrentImage)) {
-                continue;
+                return;
             }
             if (point.getX().intValue() < this.getImage().getWidth() && point.getY().intValue() < this.getImage().getHeight()) {
                 this.onMainDialogEvent(new AddRoiEvent(point));
-                continue;
+                return;
             }
             roiPoints.put(index, point);
-        }
+        });
         return roiPoints;
     }
 
@@ -453,6 +488,15 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
         outer.setStrokeWidth(strokeWidth);
         outer.setImage(this.image);
         outer.setStrokeColor(Color.CYAN);
+        final Overlay over = this.createOverlay(strokeWidth);
+        Arrays.stream(this.image.getManager().getRoisAsArray()).forEach(over::add);
+        over.add(outer);
+        this.getImage().getManager().setOverlay(over);
+        this.getOriginalImage().getManager().setOverlay(over);
+        this.refreshRoiGUI();
+    }
+
+    private Overlay createOverlay(int strokeWidth) {
         final Overlay over = new Overlay();
         over.drawLabels(false);
         over.drawNames(true);
@@ -461,11 +505,7 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
         over.setLabelColor(Color.CYAN);
         over.setStrokeWidth((double) strokeWidth);
         over.setStrokeColor(Color.CYAN);
-        Arrays.stream(this.image.getManager().getRoisAsArray()).forEach(over::add);
-        over.add(outer);
-        this.getImage().getManager().setOverlay(over);
-        this.getOriginalImage().getManager().setOverlay(over);
-        this.refreshRoiGUI();
+        return over;
     }
 
     private void deleteRoi(DeleteRoiEvent dialogEvent) {
@@ -663,6 +703,7 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
             this.run();
         }
     }
+
     /**
      * Dispose all the opened workload objects.
      */

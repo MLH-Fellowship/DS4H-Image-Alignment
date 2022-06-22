@@ -181,14 +181,14 @@ public class FileService {
 
     public static String chooseDirectory() {
         final JFileChooser chooser = new JFileChooser();
-        chooser.setCurrentDirectory(new java.io.File("."));
+        chooser.setCurrentDirectory(new java.io.File(System.getProperty("user.home")));
         chooser.setDialogTitle("Choose a Directory");
         chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
         chooser.setAcceptAllFileFilterUsed(false);
         if (chooser.showOpenDialog(new Frame()) == JFileChooser.APPROVE_OPTION) {
             return chooser.getSelectedFile().getAbsolutePath();
         }
-        return System.getProperty("user.home") + "/Desktop";
+        return "";
     }
 
     public static File newFile(File destinationDir, ZipEntry zipEntry) throws IOException {

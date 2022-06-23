@@ -44,6 +44,7 @@ public class Loader implements LibraryLoader {
                 if (in != null) {
                     IOUtils.copy(in, out);
                     in.close();
+                    out.close(); // Without this line it doesn't work on windows, so, just leave it there, avoid even the check for the OS
                     System.load(fileOut.toString());
                 }
             }

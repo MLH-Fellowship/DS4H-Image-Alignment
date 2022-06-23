@@ -376,6 +376,9 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
             }
             this.getManager().addFile(pathFile);
             this.getManager().addFileToOriginalList(pathFile);
+            if (this.getManager().getNImages() > 1) {
+                this.getMainDialog().setAutoAlignButtonEnabled(true);
+            }
         } catch (UnknownFormatException e) {
             this.getLoadingDialog().hideDialog();
             JOptionPane.showMessageDialog(null, UNKNOWN_FORMAT_MESSAGE, UNKNOWN_FORMAT_TITLE, JOptionPane.ERROR_MESSAGE);
@@ -411,11 +414,7 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
         builder.getLoadingDialog().showDialog();
         Utilities.setTimeout(() -> {
             try {
-                if (event.isKeepOriginal()) {
-                    this.alignHandler(builder);
-                } else {
-                    builder.build();
-                }
+                this.alignHandler(builder);
             } catch (Exception e) {
                 IJ.showMessage(e.getMessage());
             }
@@ -629,6 +628,9 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
             if (finalIndex < 1) {
                 finalIndex = 1;
             }
+            if (this.getManager().getNImages() == 1) {
+                this.getMainDialog().setAutoAlignButtonEnabled(false);
+            }
             this.getMainDialog().setPrevImageButtonEnabled(finalIndex > 1 && this.getManager().getCurrentIndex() != 0);
             this.getMainDialog().setNextImageButtonEnabled(getManager().hasNext());
             this.getMainDialog().setTitle(MessageFormat.format(MAIN_DIALOG_TITLE_PATTERN, finalIndex, this.getManager().getNImages()));
@@ -679,6 +681,9 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
             this.getMainDialog().setPrevImageButtonEnabled(this.getManager().hasPrevious());
             this.getMainDialog().setNextImageButtonEnabled(this.getManager().hasNext());
             this.getMainDialog().setTitle(MessageFormat.format(MAIN_DIALOG_TITLE_PATTERN, this.getManager().getCurrentIndex() + 1, this.getManager().getNImages()));
+            if (filePaths.size() == 1) {
+                this.getMainDialog().setAutoAlignButtonEnabled(false);
+            }
             this.getLoadingDialog().hideDialog();
             if (this.getImage().isReduced())
                 JOptionPane.showMessageDialog(null, IMAGES_SCALED_MESSAGE, "Info", JOptionPane.INFORMATION_MESSAGE);

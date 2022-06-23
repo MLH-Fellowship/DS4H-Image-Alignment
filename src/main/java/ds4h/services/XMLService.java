@@ -32,6 +32,7 @@ import static javax.xml.parsers.DocumentBuilderFactory.newInstance;
 
 
 public class XMLService {
+    private static final String FILEPATH = "filePath";
     private XMLService() {
     }
 
@@ -58,25 +59,29 @@ public class XMLService {
         Element rootElement = doc.createElement(rootElementName);
         doc.appendChild(rootElement);
 
-        project.getProjectRois()
-                .stream()
-                .collect(Collectors.groupingBy(ProjectRoi::getPathFile))
-                .forEach((pathFile, projectRoiList) -> {
-                    Element childElement = doc.createElement(childName);
-                    rootElement.appendChild(childElement);
-                    childElement.setAttribute("filePath", pathFile);
-                    projectRoiList.forEach(projectRoi -> {
-                        Element roiIndexElement = doc.createElement("roiIndex");
-                        roiIndexElement.setAttribute("id", String.valueOf(projectRoi.getRoiIndex()));
-                        Element x = doc.createElement("x");
-                        Element y = doc.createElement("y");
-                        x.setTextContent(projectRoi.getPoint().getX().toString());
-                        y.setTextContent(projectRoi.getPoint().getY().toString());
-                        roiIndexElement.appendChild(x);
-                        roiIndexElement.appendChild(y);
-                        childElement.appendChild(roiIndexElement);
-                    });
-                });
+        List<Element> childElements = new ArrayList<>();
+        for (String filePath : project.getFilePaths()) {
+            Element childElement = doc.createElement(childName);
+            rootElement.appendChild(childElement);
+            childElement.setAttribute(FILEPATH, filePath);
+            childElement.setAttribute("id", String.valueOf(project.getFilePaths().indexOf(filePath)));
+            childElements.add(childElement);
+        }
+        List<Pair<String, List<ProjectRoi>>> projectRoisList = project.getProjectRois().stream().collect(Collectors.groupingBy(ProjectRoi::getPathFile)).entrySet().stream().map(entry -> new Pair<>(entry.getKey(), entry.getValue())).collect(Collectors.toList());
+        for (Pair<String, List<ProjectRoi>> pair : projectRoisList) {
+            List<ProjectRoi> projectRoiList = pair.getY();
+            for (ProjectRoi projectRoi : projectRoiList) {
+                Element roiIndexElement = doc.createElement("roiIndex");
+                roiIndexElement.setAttribute("id", String.valueOf(projectRoi.getRoiIndex()));
+                Element x = doc.createElement("x");
+                Element y = doc.createElement("y");
+                x.setTextContent(projectRoi.getPoint().getX().toString());
+                y.setTextContent(projectRoi.getPoint().getY().toString());
+                roiIndexElement.appendChild(x);
+                roiIndexElement.appendChild(y);
+                childElements.stream().filter(childElement -> childElement.getAttribute(FILEPATH).equals(pair.getX())).findFirst().ifPresent(childElement -> childElement.appendChild(roiIndexElement));
+            }
+        }
         try (FileOutputStream output = new FileOutputStream(fileOutputPath)) {
             writeXml(doc, output);
         } catch (IOException | TransformerException e) {
@@ -104,7 +109,7 @@ public class XMLService {
 
     public static Project loadProject(String filePath) {
         Project project = new Project();
-        List<String> filePaths = new ArrayList<>();
+        List<Pair<Integer, String>> filePaths = new ArrayList<>();
         List<ProjectRoi> projectRois = new ArrayList<>();
         DocumentBuilderFactory docFactory = newInstance();
         // to be compliant, completely disable DOCTYPE declaration:
@@ -126,8 +131,9 @@ public class XMLService {
                 Node imageNode = images.item(imageNodeIndex);
                 if (imageNode.getNodeType() == Node.ELEMENT_NODE) {
                     Element imageElement = (Element) imageNode;
-                    String imageFilePath = imageElement.getAttribute("filePath");
-                    filePaths.add(imageFilePath);
+                    String imageFilePath = imageElement.getAttribute(FILEPATH);
+                    int imageIndex = Integer.parseInt(imageElement.getAttribute("id"));
+                    filePaths.add(new Pair<>(imageIndex, imageFilePath));
                     NodeList roiIndexes = imageElement.getElementsByTagName("roiIndex");
                     for (int roiNodeIndex = 0; roiNodeIndex < roiIndexes.getLength(); roiNodeIndex++) {
                         Node roiNode = roiIndexes.item(roiNodeIndex);
@@ -147,7 +153,7 @@ public class XMLService {
         } catch (ParserConfigurationException | SAXException | IOException e) {
             e.printStackTrace();
         }
-        project.setFilePaths(filePaths);
+        project.setFilePaths(filePaths.stream().sorted(Comparator.comparingInt(Pair::getX)).map(Pair::getY).collect(Collectors.toList()));
         project.setProjectRois(projectRois);
         return project;
     }

@@ -50,14 +50,16 @@ public class SettingDialog extends JDialog {
     this.add(this.getOkButton(), BorderLayout.SOUTH);
     this.setLocationRelativeTo(null); // centers the frame
     this.setDefaultCloseOperation(DISPOSE_ON_CLOSE);
-    this.pack();
-    this.setVisible(true);
     this.addWindowListener(new WindowAdapter() {
       @Override
-      public void windowClosed(WindowEvent windowEvent) {
+      public void windowClosing(WindowEvent e) {
+        super.windowClosing(e);
         isSuccessFul[0] = false;
       }
     });
+
+    this.pack();
+    this.setVisible(true);
 
     return isSuccessFul[0];
   }

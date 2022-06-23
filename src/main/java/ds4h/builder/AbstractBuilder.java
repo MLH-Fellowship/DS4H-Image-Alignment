@@ -22,6 +22,7 @@ import ij.io.FileSaver;
 import java.awt.*;
 import java.awt.image.ColorModel;
 import java.io.File;
+import java.util.ArrayList;
 import java.util.List;
 
 public abstract class AbstractBuilder {
@@ -39,7 +40,10 @@ public abstract class AbstractBuilder {
   private VirtualStack virtualStack;
   private ImagePlus transformedImagesStack;
   private Dimension maximumSize;
-  private List<String> tempImages;
+  private List<String> tempImages = new ArrayList<>();
+  private List<Dimension> imagesDimensions = new ArrayList<>();
+  private int sourceImageIndex = -1;
+
   
   protected AbstractBuilder(LoadingDialog loadingDialog, OnAlignDialogEventListener listener, ImagesManager manager, IMainDialogEvent event) {
     this.loadingDialog = loadingDialog;
@@ -100,6 +104,16 @@ public abstract class AbstractBuilder {
   }
   
   protected void setMaximumSize(Dimension maximumSize) {
+    for (int i = 0; i < this.getImagesDimensions().size(); i++) {
+      Dimension dimension = this.getImagesDimensions().get(i);
+      if (dimension.width > maximumSize.width) {
+        maximumSize.width = dimension.width;
+        this.sourceImageIndex = i;
+      }
+      if (dimension.height > maximumSize.height) {
+        maximumSize.height = dimension.height;
+      }
+    }
     this.maximumSize = maximumSize;
   }
   
@@ -117,5 +131,17 @@ public abstract class AbstractBuilder {
   
   protected void setVirtualStack() {
     this.virtualStack = new VirtualStack(this.getMaximumSize().width, this.getMaximumSize().height, ColorModel.getRGBdefault(), IJ.getDir(TEMP_PATH));
+  }
+
+  public int getSourceImageIndex() {
+    return sourceImageIndex;
+  }
+
+  public List<Dimension> getImagesDimensions() {
+    return imagesDimensions;
+  }
+
+  protected void setImagesDimensions(List<Dimension> imagesDimensions) {
+    this.imagesDimensions = new ArrayList<>(imagesDimensions);
   }
 }

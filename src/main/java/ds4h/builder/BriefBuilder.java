@@ -60,7 +60,8 @@ public class BriefBuilder extends AbstractBuilder {
   @Override
   public void init() {
     this.importImages();
-    this.setMaximumSize(new Dimension(this.getSourceImage().width(), this.getSourceImage().height()));
+    this.setImagesDimensions(this.getManager().getImagesDimensions());
+    this.setMaximumSize(new Dimension());
     this.setVirtualStack();
   }
 
@@ -72,49 +73,53 @@ public class BriefBuilder extends AbstractBuilder {
   @Override
   public void align() {
     try {
-      this.newProcessHandler(this.getSourceImage());
-      for (int index = 1; index < images.size(); index++) {
-        // two images
-        final Mat firstImage = this.getSourceImage();
-        final Mat secondImage = images.get(index);
-        final MatOfKeyPoint firstKeyPoints = this.getKeypoint(firstImage);
-        final MatOfKeyPoint secondKeyPoints = this.getKeypoint(secondImage);
-        final Mat firstDescriptor = this.getDescriptor(firstImage, firstKeyPoints);
-        final Mat secondDescriptor = this.getDescriptor(secondImage, secondKeyPoints);
-        // match
-        final DescriptorMatcher matcher = DescriptorMatcher.create(DescriptorMatcher.BRUTEFORCE_HAMMING);
-        // convert to float to use flann ( Brief is a binary descriptor )
-        if (firstDescriptor.type() != CV_8U) {
-          firstDescriptor.convertTo(firstDescriptor, CV_8U);
+      AutoAlignEvent event = (AutoAlignEvent) this.getEvent();
+      if (event.isKeepOriginal()) {
+        for (int index = 0; index < images.size(); index++) {
+          // two images
+          final Mat firstImage = this.getSourceImage();
+          final Mat secondImage = images.get(index);
+          final MatOfKeyPoint firstKeyPoints = this.getKeypoint(firstImage);
+          final MatOfKeyPoint secondKeyPoints = this.getKeypoint(secondImage);
+          final Mat firstDescriptor = this.getDescriptor(firstImage, firstKeyPoints);
+          final Mat secondDescriptor = this.getDescriptor(secondImage, secondKeyPoints);
+          // match
+          final DescriptorMatcher matcher = DescriptorMatcher.create(DescriptorMatcher.BRUTEFORCE_HAMMING);
+          // convert to float to use flann ( Brief is a binary descriptor )
+          if (firstDescriptor.type() != CV_8U) {
+            firstDescriptor.convertTo(firstDescriptor, CV_8U);
+          }
+          if (secondDescriptor.type() != CV_8U) {
+            secondDescriptor.convertTo(secondDescriptor, CV_8U);
+          }
+          // match descriptors and filter to avoid false positives
+          List<MatOfDMatch> knnMatches = new ArrayList<>();
+          try {
+            matcher.knnMatch(firstDescriptor, secondDescriptor, knnMatches, 2);
+          } catch (Exception e) {
+            IJ.showMessage("Check all your images, one of them seems to have not valuable matches for our algorithm");
+          }
+          List<DMatch> goodMatches = this.getGoodMatches(knnMatches);
+          // Below four matches the images couldn't be related
+          if (goodMatches.size() > 4) {
+            final MatOfPoint2f points = new MatOfPoint2f(this.getPointsArray(firstImage));
+            Mat dest = new Mat();
+            // Check directly the Javadoc, to learn more
+            Core.perspectiveTransform(points, dest, this.getHomography(goodMatches, firstKeyPoints.toList(), secondKeyPoints.toList()));
+            final Mat perspectiveM = Imgproc.getPerspectiveTransform(points, dest);
+            Mat warpedImage = new Mat();
+            // Literally takes the secondImage, the perspective transformation matrix, the size of the first image, then warps the second image to fit the first, at least that's what I think is happening
+            Imgproc.warpPerspective(secondImage, warpedImage, perspectiveM, new Size(firstImage.width(), firstImage.height()), Imgproc.WARP_INVERSE_MAP, Core.BORDER_CONSTANT);
+            // not the nicest solution, but obviously the image's data address changes after but the image it's the same, so to retrieve the same path I had to do this
+            this.replaceKey(secondImage.dataAddr(), warpedImage.dataAddr());
+            // then to all the things need to create a virtual stack of images
+            this.newProcessHandler(warpedImage);
+          } else {
+            IJ.showMessage("Not enough matches");
+          }
         }
-        if (secondDescriptor.type() != CV_8U) {
-          secondDescriptor.convertTo(secondDescriptor, CV_8U);
-        }
-        // match descriptors and filter to avoid false positives
-        List<MatOfDMatch> knnMatches = new ArrayList<>();
-        try {
-          matcher.knnMatch(firstDescriptor, secondDescriptor, knnMatches, 2);
-        } catch (Exception e) {
-          IJ.showMessage("Check all your images, one of them seems to have not valuable matches for our algorithm");
-        }
-        List<DMatch> goodMatches = this.getGoodMatches(knnMatches);
-        // Below four matches the images couldn't be related
-        if (goodMatches.size() > 4) {
-          final MatOfPoint2f points = new MatOfPoint2f(this.getPointsArray(firstImage));
-          Mat dest = new Mat();
-          // Check directly the Javadoc, to learn more
-          Core.perspectiveTransform(points, dest, this.getHomography(goodMatches, firstKeyPoints.toList(), secondKeyPoints.toList()));
-          final Mat perspectiveM = Imgproc.getPerspectiveTransform(points, dest);
-          Mat warpedImage = new Mat();
-          // Literally takes the secondImage, the perspective transformation matrix, the size of the first image, then warps the second image to fit the first, at least that's what I think is happening
-          Imgproc.warpPerspective(secondImage, warpedImage, perspectiveM, new Size(firstImage.width(), firstImage.height()), Imgproc.WARP_INVERSE_MAP, Core.BORDER_CONSTANT);
-          // not the nicest solution, but obviously the image's data address changes after but the image it's the same, so to retrieve the same path I had to do this
-          this.replaceKey(secondImage.dataAddr(), warpedImage.dataAddr());
-          // then to all the things need to create a virtual stack of images
-          this.newProcessHandler(warpedImage);
-        } else {
-          IJ.showMessage("Not enough matches");
-        }
+      } else {
+        // TODO: FINISH THIS
       }
     } catch (Exception e) {
       IJ.showMessage("Not all the images will be put in the aligned stack, something went wrong, check your image because it seems that we couldn't find a relation");
@@ -140,7 +145,7 @@ public class BriefBuilder extends AbstractBuilder {
   }
   
   private void newProcessHandler(Mat image) {
-    ImageProcessor newProcessor = new ColorProcessor(image.width(), image.height());
+    ImageProcessor newProcessor = new ColorProcessor(this.getMaximumSize().width, this.getMaximumSize().height);
     ImagePlus transformedImage = matToImagePlus(image);
     newProcessor.insert(transformedImage.getProcessor(), 0, 0);
     this.addToVirtualStack(new ImagePlus("", newProcessor), this.getVirtualStack());
@@ -235,7 +240,7 @@ public class BriefBuilder extends AbstractBuilder {
   }
   
   private Mat getSourceImage() {
-    return this.images.get(0);
+    return this.images.get(this.getSourceImageIndex());
   }
   
   private void replaceKey(Long oldAddress, Long newAddress) {

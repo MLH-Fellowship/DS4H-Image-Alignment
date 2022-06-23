@@ -5,9 +5,9 @@ import ds4h.dialog.preview.event.ChangeImageEvent;
 import ds4h.dialog.preview.event.CloseDialogEvent;
 import ds4h.image.buffered.BufferedImage;
 import ij.IJ;
+import ij.WindowManager;
 import ij.gui.ImageWindow;
 import ij.gui.Overlay;
-import ij.plugin.Zoom;
 
 import javax.swing.*;
 import java.awt.*;
@@ -79,8 +79,8 @@ public class PreviewDialog extends ImageWindow {
     });
     this.setResizable(false);
     this.listener = listener;
-    new Zoom().run("scale");
-    pack();
+    WindowManager.getCurrentImage().getCanvas().fitToWindow();
+    this.pack();
   }
   
   public void changeImage(BufferedImage image, String title) {
@@ -89,7 +89,7 @@ public class PreviewDialog extends ImageWindow {
     this.drawRois();
     // The zoom scaling command works on the current active window: to be 100% sure it will work, we need to forcefully select the preview window.
     IJ.selectWindow(this.getImagePlus().getID());
-    new Zoom().run("scale");
+    WindowManager.getCurrentImage().getCanvas().fitToWindow();
     this.setTitle(title);
     this.pack();
   }

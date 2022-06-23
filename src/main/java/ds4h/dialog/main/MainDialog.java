@@ -7,19 +7,16 @@ import ds4h.services.FileService;
 import ds4h.utils.Pair;
 import ij.IJ;
 import ij.Prefs;
+import ij.WindowManager;
 import ij.gui.ImageWindow;
 import ij.gui.Overlay;
 import ij.gui.Roi;
 import ij.gui.RoiListener;
-import ij.plugin.Zoom;
 import ij.plugin.frame.RoiManager;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.KeyEvent;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
-import java.awt.event.MouseMotionAdapter;
+import java.awt.event.*;
 import java.awt.geom.Rectangle2D;
 import java.math.BigDecimal;
 import java.text.MessageFormat;
@@ -43,6 +40,7 @@ public class MainDialog extends ImageWindow {
   private final JButton btnPrevImage;
   private final JButton btnNextImage;
   private final JButton btnAlignImages;
+  private final JButton btnAutoAlignImages;
   private final JCheckBox checkKeepOriginal;
   private final DefaultListModel<String> jListRoisModel;
   public JList<String> jListRois;
@@ -51,6 +49,12 @@ public class MainDialog extends ImageWindow {
   private Rectangle oldRect = null;
   private Rectangle2D.Double lastBound;
   private Roi lastRoi;
+
+  /**
+   * I really hate myself for this tricky workaround, when Zooming the title gets changed
+   * It doesn't make sense, this is only fast way I've found
+   */
+  private boolean titleHasToChange = true;
 
   public MainDialog(BufferedImage plus, OnMainDialogEventListener listener) {
     super(plus, new CustomCanvas(plus));
@@ -68,16 +72,15 @@ public class MainDialog extends ImageWindow {
     this.btnAlignImages = new JButton("ALIGN IMAGES VIA CORNERS");
     this.btnAlignImages.setToolTipText("Align the images based on the added corner points");
     this.btnAlignImages.setEnabled(false);
-    final JButton btnAutoAlignment = new JButton("AUTO ALIGN IMAGES");
-    btnAutoAlignment.setToolTipText("Align the images automatically without thinking what it is needed to be done");
-    btnAutoAlignment.setEnabled(true);
+    this.btnAutoAlignImages = new JButton("AUTO ALIGN IMAGES");
+    this.btnAutoAlignImages.setToolTipText("Align the images automatically without thinking what it is needed to be done");
+    this.btnAutoAlignImages.setEnabled(true);
     this.checkKeepOriginal = new JCheckBox("Keep all pixel data");
     this.checkKeepOriginal.setToolTipText("Keep the original images boundaries, applying stitching where necessary. NOTE: this operation is resource-intensive.");
     this.checkKeepOriginal.setSelected(true);
     this.checkKeepOriginal.setEnabled(false);
     // Remove the canvas from the window, to add it later
     this.removeAll();
-    this.setTitle(DIALOG_STATIC_TITLE);
     // Training panel (left side of the GUI)
     final JPanel cornersJPanel = new JPanel();
     cornersJPanel.setBorder(BorderFactory.createTitledBorder("Corners"));
@@ -144,7 +147,7 @@ public class MainDialog extends ImageWindow {
     alignJPanel.setLayout(alignLayout);
     alignJPanel.add(this.checkKeepOriginal, actionsConstraints);
     alignJPanel.add(this.btnAlignImages, actionsConstraints);
-    alignJPanel.add(btnAutoAlignment, actionsConstraints);
+    alignJPanel.add(this.btnAutoAlignImages, actionsConstraints);
     alignJPanel.setLayout(alignLayout);
     // Buttons panel
     final JPanel buttonsPanel = new JPanel();
@@ -191,10 +194,16 @@ public class MainDialog extends ImageWindow {
       final int[] indices = this.jListRois.getSelectedIndices();
       this.eventListener.onMainDialogEvent(new DeleteRoisEvent(indices));
     });
-    this.btnPrevImage.addActionListener(e -> this.eventListener.onMainDialogEvent(new ChangeImageEvent(ChangeImageEvent.ChangeDirection.PREV)));
-    this.btnNextImage.addActionListener(e -> this.eventListener.onMainDialogEvent(new ChangeImageEvent(ChangeImageEvent.ChangeDirection.NEXT)));
+    this.btnPrevImage.addActionListener(e -> {
+      titleHasToChange = true;
+      this.eventListener.onMainDialogEvent(new ChangeImageEvent(ChangeImageEvent.ChangeDirection.PREV));
+    });
+    this.btnNextImage.addActionListener(e -> {
+      titleHasToChange = true;
+      this.eventListener.onMainDialogEvent(new ChangeImageEvent(ChangeImageEvent.ChangeDirection.NEXT));
+    });
     this.btnAlignImages.addActionListener(e -> this.eventListener.onMainDialogEvent(new AlignEvent(this.checkKeepOriginal.isSelected())));
-    btnAutoAlignment.addActionListener(e -> this.eventListener.onMainDialogEvent(new AutoAlignEvent()));
+    this.btnAutoAlignImages.addActionListener(e -> this.eventListener.onMainDialogEvent(new AutoAlignEvent(this.checkKeepOriginal.isSelected())));
     // Markers addition handlers
     KeyboardFocusManager manager = KeyboardFocusManager.getCurrentKeyboardFocusManager();
     manager.addKeyEventDispatcher(new KeyboardEventDispatcher());
@@ -247,7 +256,7 @@ public class MainDialog extends ImageWindow {
     });
     MainDialog.currentImage = image;
     this.addEventListenerToImage();
-    new Zoom().run(SCALE_OPTION);
+    WindowManager.getCurrentImage().getCanvas().fitToWindow();
     this.pack();
     this.setVisible(true);
   }
@@ -368,7 +377,7 @@ public class MainDialog extends ImageWindow {
       // Let's call the zoom plugin to scale the image to fit in the user window
       // The zoom scaling command works on the current active window: to be 100% sure it will work, we need to forcefully select the preview window.
       IJ.selectWindow(this.getImagePlus().getID());
-      new Zoom().run(SCALE_OPTION);
+      WindowManager.getCurrentImage().getCanvas().fitToWindow();
       this.pack();
     }
   }
@@ -446,16 +455,29 @@ public class MainDialog extends ImageWindow {
 
   public void setAlignButtonEnabled(boolean enabled) {
     this.btnAlignImages.setEnabled(enabled);
+  }
+
+  public void setAutoAlignButtonEnabled(boolean enabled) {
+    this.btnAutoAlignImages.setEnabled(enabled);
     this.checkKeepOriginal.setEnabled(enabled);
   }
+
 
   public void setCopyCornersEnabled(boolean enabled) {
     this.btnCopyCorners.setEnabled(enabled);
   }
 
   @Override
+  public synchronized void mouseWheelMoved(MouseWheelEvent e) {
+    titleHasToChange = false;
+    super.mouseWheelMoved(e);
+  }
+
+  @Override
   public void setTitle(String title) {
-    super.setTitle(DIALOG_STATIC_TITLE + " " + title);
+    if (titleHasToChange) {
+      super.setTitle(DIALOG_STATIC_TITLE + " " + title);
+    }
   }
 
   private class KeyboardEventDispatcher implements KeyEventDispatcher {

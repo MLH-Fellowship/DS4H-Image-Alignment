@@ -17,7 +17,7 @@ import static java.util.stream.Collectors.toList;
 
 public class WindowsDllLoader implements ResourceLoader, OpenCVUtility {
   private static final String PREFIX = "opencv_";
-  private static final String EXT = ".dylib";
+  private static final String EXT = ".dll";
 
   @Override
   public List<InputStream> getInputStreams() {

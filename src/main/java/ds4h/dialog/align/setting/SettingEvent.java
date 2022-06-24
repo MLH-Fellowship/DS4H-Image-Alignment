@@ -9,9 +9,9 @@
 
 package ds4h.dialog.align.setting;
 
-import ds4h.dialog.main.event.IMainDialogEvent;
+import ds4h.dialog.main.event.MainDialogEvent;
 
-public class SettingEvent implements IMainDialogEvent {
+public class SettingEvent implements MainDialogEvent {
   private boolean isProjective;
   private boolean isRigid;
   

@@ -4,7 +4,7 @@ import ds4h.utils.Pair;
 
 import java.math.BigDecimal;
 
-public class AddRoiEvent implements IMainDialogEvent {
+public class AddRoiEvent implements MainDialogEvent {
   private final Pair<BigDecimal, BigDecimal> coordinates;
   
   public AddRoiEvent(Pair<BigDecimal, BigDecimal> coordinates) {

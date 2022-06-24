@@ -4,8 +4,7 @@ import ds4h.dialog.align.AlignDialog;
 import ds4h.dialog.align.OnAlignDialogEventListener;
 import ds4h.dialog.align.setting.SettingDialog;
 import ds4h.dialog.loading.LoadingDialog;
-import ds4h.dialog.main.event.AlignEvent;
-import ds4h.dialog.main.event.IMainDialogEvent;
+import ds4h.dialog.main.event.MainDialogEvent;
 import ds4h.image.buffered.BufferedImage;
 import ds4h.image.manager.ImagesManager;
 import ds4h.image.registration.LeastSquareImageTransformation;
@@ -30,21 +29,11 @@ import java.util.Optional;
 
 public class LeastSquareTransformationBuilder extends AbstractBuilder {
     private List<RoiManager> managers;
-    private List<Integer> offsetsX;
-    private List<Integer> offsetsY;
     private SettingDialog settingDialog;
     private BufferedImage sourceImage;
-    private Integer maxOffsetX;
-    private Integer maxOffsetY;
-    private int maxOffsetXIndex;
-    private int maxOffsetYIndex;
-    private int edgeX;
-    private int edgeY;
-    private int edgeX2;
-    private int edgeY2;
 
 
-    public LeastSquareTransformationBuilder(LoadingDialog loadingDialog, ImagesManager manager, IMainDialogEvent event, OnAlignDialogEventListener listener) {
+    public LeastSquareTransformationBuilder(LoadingDialog loadingDialog, ImagesManager manager, MainDialogEvent event, OnAlignDialogEventListener listener) {
         super(loadingDialog, listener, manager, event);
     }
 
@@ -85,41 +74,41 @@ public class LeastSquareTransformationBuilder extends AbstractBuilder {
 
     @Override
     public void align() {
-        AlignEvent event = (AlignEvent) this.getEvent();
-        if (event.isKeepOriginal()) {
-            for (int index = 0; index < this.getManager().getNImages(); index++) {
-                if (index == this.getSourceImageIndex()) continue;
-                ImageProcessor newProcessor = new ColorProcessor(this.getMaximumSize().width, this.getMaximumSize().height);
-                ImagePlus transformedImage = LeastSquareImageTransformation.transform(this.getManager().getOriginal(index, true), this.getSourceImage(), this.getSettingDialog().getEvent());
-                BufferedImage transformedOriginalImage = this.getManager().getOriginal(index, true);
-                this.setEdges(transformedOriginalImage);
-                int offsetXOriginal = 0;
-                if (this.offsetsX.get(index) < 0) {
-                    offsetXOriginal = Math.abs(offsetsX.get(index));
-                }
-                offsetXOriginal += maxOffsetXIndex != index ? maxOffsetX : 0;
-                int offsetXTransformed = 0;
-                if (offsetsX.get(index) > 0 && maxOffsetXIndex != index) {
-                    offsetXTransformed = Math.abs(offsetsX.get(index));
-                }
-                offsetXTransformed += maxOffsetX;
-                int difference = (int) (this.getManagers().get(maxOffsetYIndex).getRoisAsArray()[0].getYBase() - this.getManagers().get(index).getRoisAsArray()[0].getYBase());
-                newProcessor.insert(transformedOriginalImage.getProcessor(), offsetXOriginal, difference);
-                if (transformedImage != null) {
-                    newProcessor.insert(transformedImage.getProcessor(), offsetXTransformed, (maxOffsetY));
-                }
-                this.addToVirtualStack(new ImagePlus("", newProcessor), this.getVirtualStack());
+        BufferedImage sourceImg = this.getManager().getOriginal(0, true);
+        VirtualStack virtualStack = new VirtualStack(sourceImg.getWidth(), sourceImg.getHeight(), ColorModel.getRGBdefault(), IJ.getDir(TEMP_PATH));
+        this.addToVirtualStack(sourceImg, virtualStack);
+        for (int index = 1; index < this.getManager().getNImages(); index++) {
+            ImagePlus transformedImage = LeastSquareImageTransformation.transform(this.getManager().getOriginal(index, true), sourceImg, this.getSettingDialog().getEvent());
+            if (transformedImage != null) {
+                this.addToVirtualStack(transformedImage, virtualStack);
             }
-        } else {
-            BufferedImage sourceImg = this.getManager().getOriginal(0, true);
-            VirtualStack virtualStack = new VirtualStack(sourceImg.getWidth(), sourceImg.getHeight(), ColorModel.getRGBdefault(), IJ.getDir(TEMP_PATH));
-            this.addToVirtualStack(sourceImg, virtualStack);
-            for (int index = 1; index < this.getManager().getNImages(); index++) {
-                ImagePlus transformedImage = LeastSquareImageTransformation.transform(this.getManager().getOriginal(index, true), sourceImg, this.getSettingDialog().getEvent());
-                if (transformedImage != null) {
-                    this.addToVirtualStack(transformedImage, virtualStack);
-                }
+        }
+    }
+
+    @Override
+    public void alignKeepOriginal() {
+        for (int index = 0; index < this.getManager().getNImages(); index++) {
+            if (index == this.getSourceImageIndex()) continue;
+            ImageProcessor newProcessor = new ColorProcessor(this.getMaximumSize().width, this.getMaximumSize().height);
+            ImagePlus transformedImage = LeastSquareImageTransformation.transform(this.getManager().getOriginal(index, true), this.getSourceImage(), this.getSettingDialog().getEvent());
+            BufferedImage transformedOriginalImage = this.getManager().getOriginal(index, true);
+            this.setEdges(transformedOriginalImage);
+            int offsetXOriginal = 0;
+            if (this.getOffsetsX().get(index) < 0) {
+                offsetXOriginal = Math.abs(this.getOffsetsX().get(index));
             }
+            offsetXOriginal += this.getMaxOffsetXIndex() != index ? this.getMaxOffsetX() : 0;
+            int offsetXTransformed = 0;
+            if (this.getOffsetsX().get(index) > 0 && this.getMaxOffsetXIndex() != index) {
+                offsetXTransformed = Math.abs(this.getOffsetsX().get(index));
+            }
+            offsetXTransformed += this.getMaxOffsetX();
+            int difference = (int) (this.getManagers().get(this.getMaxOffsetYIndex()).getRoisAsArray()[0].getYBase() - this.getManagers().get(index).getRoisAsArray()[0].getYBase());
+            newProcessor.insert(transformedOriginalImage.getProcessor(), offsetXOriginal, difference);
+            if (transformedImage != null) {
+                newProcessor.insert(transformedImage.getProcessor(), offsetXTransformed, (this.getMaxOffsetY()));
+            }
+            this.addToVirtualStack(new ImagePlus("", newProcessor), this.getVirtualStack());
         }
     }
 
@@ -163,16 +152,16 @@ public class LeastSquareTransformationBuilder extends AbstractBuilder {
     }
 
     private void setOffsets() {
-        this.offsetsX = new ArrayList<>();
-        this.offsetsY = new ArrayList<>();
+        this.setOffsetsX(new ArrayList<>());
+        this.setOffsetsY(new ArrayList<>());
         this.managers = this.getManager().getRoiManagers();
-        for (int i = 0; i < this.getManagers().size(); i++) {
-            if (i == this.getSourceImageIndex()) {
+        for (int index = 0; index < this.getManagers().size(); index++) {
+            if (index == this.getSourceImageIndex()) {
                 this.getOffsetsX().add(0);
                 this.getOffsetsY().add(0);
                 continue;
             }
-            Roi roi = this.getManagers().get(i).getRoisAsArray()[0];
+            Roi roi = this.getManagers().get(index).getRoisAsArray()[0];
             this.getOffsetsX().add((int) (roi.getXBase() - this.getSourceImage().getManager().getRoisAsArray()[0].getXBase()));
             this.getOffsetsY().add((int) (roi.getYBase() - this.getSourceImage().getManager().getRoisAsArray()[0].getYBase()));
         }
@@ -180,14 +169,14 @@ public class LeastSquareTransformationBuilder extends AbstractBuilder {
         Optional<Integer> optMaxY = this.getOffsetsY().stream().max(Comparator.naturalOrder());
         optMaxX.ifPresent(this::setMaxOffsetX);
         optMaxY.ifPresent(this::setMaxOffsetY);
-        this.maxOffsetXIndex = this.getOffsetsX().indexOf(this.getMaxOffsetX());
-        if (maxOffsetX <= 0) {
-            this.maxOffsetX = 0;
-            this.maxOffsetXIndex = -1;
+        this.setMaxOffsetXIndex(this.getOffsetsX().indexOf(this.getMaxOffsetX()));
+        if (this.getMaxOffsetX() <= 0) {
+            this.setMaxOffsetX(0);
+            this.setMaxOffsetXIndex(-1);
         }
-        this.maxOffsetYIndex = this.getOffsetsY().indexOf(this.getMaxOffsetY());
-        if (maxOffsetY <= 0) {
-            this.maxOffsetY = 0;
+        this.setMaxOffsetYIndex(this.getOffsetsY().indexOf(this.getMaxOffsetY()));
+        if (this.getMaxOffsetY() <= 0) {
+            this.setMaxOffsetY(0);
         }
     }
 
@@ -198,46 +187,6 @@ public class LeastSquareTransformationBuilder extends AbstractBuilder {
     @SuppressWarnings("SameParameterValue")
     private void setSourceImage(boolean isWholeSlide) {
         this.sourceImage = this.getManager().getOriginal(this.getSourceImageIndex(), isWholeSlide);
-    }
-
-    private Integer getMaxOffsetX() {
-        return this.maxOffsetX;
-    }
-
-    private void setMaxOffsetX(Integer maxOffsetX) {
-        this.maxOffsetX = maxOffsetX;
-    }
-
-    private Integer getMaxOffsetY() {
-        return this.maxOffsetY;
-    }
-
-    private void setMaxOffsetY(Integer maxOffsetY) {
-        this.maxOffsetY = maxOffsetY;
-    }
-
-    private int getEdgeX() {
-        return this.edgeX;
-    }
-
-    private int getEdgeY() {
-        return this.edgeY;
-    }
-
-    private int getEdgeX2() {
-        return this.edgeX2;
-    }
-
-    private int getEdgeY2() {
-        return this.edgeY2;
-    }
-
-    private List<Integer> getOffsetsX() {
-        return this.offsetsX;
-    }
-
-    private List<Integer> getOffsetsY() {
-        return this.offsetsY;
     }
 
     private List<RoiManager> getManagers() {
@@ -258,24 +207,24 @@ public class LeastSquareTransformationBuilder extends AbstractBuilder {
     }
 
     private void setEdges(BufferedImage transformedOriginalImage) {
-        this.edgeX = -1;
-        this.edgeY = -1;
+        this.setEdgeX(-1);
+        this.setEdgeY(-1);
         for (Roi points : transformedOriginalImage.getManager().getRoisAsArray()) {
             if (this.getEdgeX() == -1 || this.getEdgeX() > points.getXBase()) {
-                this.edgeX = (int) points.getXBase();
+                this.setEdgeX((int) points.getXBase());
             }
             if (this.getEdgeY() == -1 || this.getEdgeY() > points.getYBase()) {
-                this.edgeY = (int) points.getYBase();
+                this.setEdgeY((int) points.getYBase());
             }
         }
-        this.edgeX2 = -1;
-        this.edgeY2 = -1;
+        this.setEdgeX2(-1);
+        this.setEdgeY2(-1);
         for (Roi roi : getSourceImage().getManager().getRoisAsArray()) {
             if (this.getEdgeX2() == -1 || this.getEdgeX2() > roi.getXBase()) {
-                this.edgeX2 = (int) roi.getXBase();
+                this.setEdgeX2((int) roi.getXBase());
             }
             if (this.getEdgeY2() == -1 || this.getEdgeY2() > roi.getYBase()) {
-                this.edgeY2 = (int) roi.getYBase();
+                this.setEdgeY2((int) roi.getYBase());
             }
         }
     }

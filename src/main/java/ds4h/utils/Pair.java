@@ -19,19 +19,19 @@ public class Pair<X, Y> {
     this.y = y;
   }
   
-  public X getX() {
+  public X getFirst() {
     return x;
   }
   
-  public void setX(X x) {
+  public void setFirst(X x) {
     this.x = x;
   }
   
-  public Y getY() {
+  public Y getSecond() {
     return y;
   }
   
-  public void setY(Y y) {
+  public void setSecond(Y y) {
     this.y = y;
   }
   

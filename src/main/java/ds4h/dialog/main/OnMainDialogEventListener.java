@@ -1,8 +1,8 @@
 package ds4h.dialog.main;
 
-import ds4h.dialog.main.event.IMainDialogEvent;
+import ds4h.dialog.main.event.MainDialogEvent;
 
 public interface OnMainDialogEventListener {
-    void onMainDialogEvent(IMainDialogEvent event);
+    void onMainDialogEvent(MainDialogEvent event);
 }
 

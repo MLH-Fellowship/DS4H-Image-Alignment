@@ -102,7 +102,7 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
     private long totalMemory = 0;
 
     @Override
-    public void onMainDialogEvent(IMainDialogEvent dialogEvent) {
+    public void onMainDialogEvent(MainDialogEvent dialogEvent) {
         if (this.image != null) {
             WindowManager.setCurrentWindow(this.image.getWindow());
         }
@@ -237,7 +237,7 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
                 // Code duplication ( like everywhere in the project, sorry I don't have time )
                 final int roiSize = (int) (Math.max(Toolkit.getDefaultToolkit().getScreenSize().width, this.getImage().getWidth()) * 0.03);
                 final Pair<BigDecimal, BigDecimal> point = projectRoi.getPoint();
-                final OvalRoi outer = new OvalRoi(point.getX().doubleValue() - ((double) roiSize / 2), point.getY().doubleValue() - ((double) roiSize / 2), roiSize, roiSize);
+                final OvalRoi outer = new OvalRoi(point.getFirst().doubleValue() - ((double) roiSize / 2), point.getSecond().doubleValue() - ((double) roiSize / 2), roiSize, roiSize);
                 final Overlay over = createOverlay(imageTemp.getWidth());
                 final int strokeWidth = Math.max((int) (imageTemp.getWidth() * 0.0025), 3);
                 Arrays.stream(imageTemp.getManager().getRoisAsArray()).forEach(over::add);
@@ -308,7 +308,7 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
             if (this.isAlreadyThere(point, roisOfCurrentImage)) {
                 return;
             }
-            if (point.getX().intValue() < this.getImage().getWidth() && point.getY().intValue() < this.getImage().getHeight()) {
+            if (point.getFirst().intValue() < this.getImage().getWidth() && point.getSecond().intValue() < this.getImage().getHeight()) {
                 this.onMainDialogEvent(new AddRoiEvent(point));
                 return;
             }
@@ -340,7 +340,7 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
             final BigDecimal x = BigDecimal.valueOf(roi.getRotationCenter().xpoints[0]).round(new MathContext(5));
             final BigDecimal y = BigDecimal.valueOf(roi.getRotationCenter().ypoints[0]).round(new MathContext(5));
             final Pair<BigDecimal, BigDecimal> rotationCenterPoint = new Pair<>(x, y);
-            if (point.getX().equals(rotationCenterPoint.getX()) && point.getY().equals(rotationCenterPoint.getY())) {
+            if (point.getFirst().equals(rotationCenterPoint.getFirst()) && point.getSecond().equals(rotationCenterPoint.getSecond())) {
                 isThere = true;
                 break;
             }
@@ -356,15 +356,15 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
         }
     }
 
-    private double getImageRatio(BufferedImage image) {
+  /*  private double getImageRatio(BufferedImage image) {
         return (double) image.getWidth() / (double) image.getHeight();
     }
 
     private Pair<BigDecimal, BigDecimal> convertPointRatio(Pair<BigDecimal, BigDecimal> point, double previousRatio, double currentRatio) {
-        BigDecimal x = point.getX().multiply(BigDecimal.valueOf(currentRatio)).divide(BigDecimal.valueOf(previousRatio), new MathContext(5));
-        BigDecimal y = point.getY().multiply(BigDecimal.valueOf(currentRatio)).divide(BigDecimal.valueOf(previousRatio), new MathContext(5));
+        BigDecimal x = point.getFirst().multiply(BigDecimal.valueOf(currentRatio)).divide(BigDecimal.valueOf(previousRatio), new MathContext(5));
+        BigDecimal y = point.getSecond().multiply(BigDecimal.valueOf(currentRatio)).divide(BigDecimal.valueOf(previousRatio), new MathContext(5));
         return new Pair<>(x, y);
-    }
+    }*/
 
     private void addFile(AddFileEvent dialogEvent) {
         String pathFile = dialogEvent.getFilePath();
@@ -426,10 +426,15 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
         builder.setTempImages(this.tempImages);
         builder.init();
         if (builder.check()) {
-            builder.align();
+            if (((RegistrationEvent) builder.getEvent()).isKeepOriginal()) {
+                builder.alignKeepOriginal();
+            } else {
+                builder.align();
+            }
             builder.build();
             this.alignDialog = builder.getAlignDialog();
             this.tempImages = builder.getTempImages();
+            this.getMainDialog().setAutoAlignButtonEnabled(this.getManager().getNImages() > 1);
         }
     }
 
@@ -480,7 +485,7 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
         Prefs.useNamesAsLabels = true;
         Prefs.noPointLabels = false;
         final int roiSize = (int) (Math.max(Toolkit.getDefaultToolkit().getScreenSize().width, this.getImage().getWidth()) * 0.03);
-        final OvalRoi outer = new OvalRoi(dialogEvent.getClickCoordinates().getX().doubleValue() - ((double) roiSize / 2), dialogEvent.getClickCoordinates().getY().doubleValue() - ((double) roiSize / 2), roiSize, roiSize);
+        final OvalRoi outer = new OvalRoi(dialogEvent.getClickCoordinates().getFirst().doubleValue() - ((double) roiSize / 2), dialogEvent.getClickCoordinates().getSecond().doubleValue() - ((double) roiSize / 2), roiSize, roiSize);
         // get roughly the 0,25% of the width of the image as stroke width of th rois added.
         // If the resultant value is too small, set it as the minimum value
         final int strokeWidth = Math.max((int) (this.getImage().getWidth() * 0.0025), 3);
@@ -681,9 +686,7 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
             this.getMainDialog().setPrevImageButtonEnabled(this.getManager().hasPrevious());
             this.getMainDialog().setNextImageButtonEnabled(this.getManager().hasNext());
             this.getMainDialog().setTitle(MessageFormat.format(MAIN_DIALOG_TITLE_PATTERN, this.getManager().getCurrentIndex() + 1, this.getManager().getNImages()));
-            if (filePaths.size() == 1) {
-                this.getMainDialog().setAutoAlignButtonEnabled(false);
-            }
+            this.getMainDialog().setAutoAlignButtonEnabled(filePaths.size() > 1);
             this.getLoadingDialog().hideDialog();
             if (this.getImage().isReduced())
                 JOptionPane.showMessageDialog(null, IMAGES_SCALED_MESSAGE, "Info", JOptionPane.INFORMATION_MESSAGE);

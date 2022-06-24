@@ -12,11 +12,13 @@ package ds4h.builder;
 import ds4h.dialog.align.AlignDialog;
 import ds4h.dialog.align.OnAlignDialogEventListener;
 import ds4h.dialog.loading.LoadingDialog;
-import ds4h.dialog.main.event.IMainDialogEvent;
+import ds4h.dialog.main.event.MainDialogEvent;
+import ds4h.image.buffered.BufferedImage;
 import ds4h.image.manager.ImagesManager;
 import ij.IJ;
 import ij.ImagePlus;
 import ij.VirtualStack;
+import ij.gui.Roi;
 import ij.io.FileSaver;
 
 import java.awt.*;
@@ -34,30 +36,49 @@ public abstract class AbstractBuilder {
   private final LoadingDialog loadingDialog;
   private final OnAlignDialogEventListener listener;
   private final ImagesManager manager;
-  private final IMainDialogEvent event;
+  private final MainDialogEvent event;
   
   private AlignDialog alignDialog;
   private VirtualStack virtualStack;
   private ImagePlus transformedImagesStack;
   private Dimension maximumSize;
+  private List<Integer> offsetsX;
+  private List<Integer> offsetsY;
+  private Integer maxOffsetX;
+  private Integer maxOffsetY;
+  private int maxOffsetXIndex;
+  private int maxOffsetYIndex;
+  private int edgeX;
+  private int edgeY;
+  private int edgeX2;
+  private int edgeY2;
   private List<String> tempImages = new ArrayList<>();
-  private List<Dimension> imagesDimensions = new ArrayList<>();
+  private List<Dimension> imagesDimensions;
   private int sourceImageIndex = -1;
 
   
-  protected AbstractBuilder(LoadingDialog loadingDialog, OnAlignDialogEventListener listener, ImagesManager manager, IMainDialogEvent event) {
+  protected AbstractBuilder(LoadingDialog loadingDialog, OnAlignDialogEventListener listener, ImagesManager manager, MainDialogEvent event) {
     this.loadingDialog = loadingDialog;
     this.listener = listener;
     this.manager = manager;
     this.event = event;
+    this.imagesDimensions = new ArrayList<>(manager.getImagesDimensions());
   }
   
   public abstract void init();
 
   public abstract boolean check();
-  
+
+  /**
+   * Unchecked checkbox "Keep all pixel data" method
+   */
   public abstract void align();
-  
+
+  /**
+   * Checked checkbox "Keep all pixel data" method
+   */
+  public abstract void alignKeepOriginal();
+
   public abstract void build();
   
   protected void addToVirtualStack(ImagePlus img, VirtualStack virtualStack) {
@@ -125,7 +146,7 @@ public abstract class AbstractBuilder {
     this.transformedImagesStack = transformedImagesStack;
   }
   
-  protected IMainDialogEvent getEvent() {
+  public MainDialogEvent getEvent() {
     return this.event;
   }
   
@@ -144,4 +165,86 @@ public abstract class AbstractBuilder {
   protected void setImagesDimensions(List<Dimension> imagesDimensions) {
     this.imagesDimensions = new ArrayList<>(imagesDimensions);
   }
+
+  public List<Integer> getOffsetsX() {
+    return offsetsX;
+  }
+
+  public List<Integer> getOffsetsY() {
+    return offsetsY;
+  }
+
+  public Integer getMaxOffsetX() {
+    return maxOffsetX;
+  }
+
+  public Integer getMaxOffsetY() {
+    return maxOffsetY;
+  }
+
+  public int getMaxOffsetXIndex() {
+    return maxOffsetXIndex;
+  }
+
+  public int getMaxOffsetYIndex() {
+    return maxOffsetYIndex;
+  }
+
+  public int getEdgeX() {
+    return edgeX;
+  }
+
+  public int getEdgeY() {
+    return edgeY;
+  }
+
+  public int getEdgeX2() {
+    return edgeX2;
+  }
+
+  public int getEdgeY2() {
+    return edgeY2;
+  }
+
+  public void setOffsetsX(List<Integer> offsetsX) {
+    this.offsetsX = offsetsX;
+  }
+
+  public void setOffsetsY(List<Integer> offsetsY) {
+    this.offsetsY = offsetsY;
+  }
+
+  public void setMaxOffsetX(Integer maxOffsetX) {
+    this.maxOffsetX = maxOffsetX;
+  }
+
+  public void setMaxOffsetY(Integer maxOffsetY) {
+    this.maxOffsetY = maxOffsetY;
+  }
+
+  public void setMaxOffsetXIndex(int maxOffsetXIndex) {
+    this.maxOffsetXIndex = maxOffsetXIndex;
+  }
+
+  public void setMaxOffsetYIndex(int maxOffsetYIndex) {
+    this.maxOffsetYIndex = maxOffsetYIndex;
+  }
+
+  public void setEdgeX(int edgeX) {
+    this.edgeX = edgeX;
+  }
+
+  public void setEdgeY(int edgeY) {
+    this.edgeY = edgeY;
+  }
+
+  public void setEdgeX2(int edgeX2) {
+    this.edgeX2 = edgeX2;
+  }
+
+  public void setEdgeY2(int edgeY2) {
+    this.edgeY2 = edgeY2;
+  }
+
+
 }

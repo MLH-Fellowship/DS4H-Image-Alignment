@@ -462,7 +462,6 @@ public class MainDialog extends ImageWindow {
     this.checkKeepOriginal.setEnabled(enabled);
   }
 
-
   public void setCopyCornersEnabled(boolean enabled) {
     this.btnCopyCorners.setEnabled(enabled);
   }

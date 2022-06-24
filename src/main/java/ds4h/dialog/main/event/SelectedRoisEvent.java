@@ -9,7 +9,7 @@
 
 package ds4h.dialog.main.event;
 
-public class SelectedRoisEvent implements IMainDialogEvent {
+public class SelectedRoisEvent implements MainDialogEvent {
   private final int[] selectedIndices;
   
   public SelectedRoisEvent(int[] selectedIndices) {

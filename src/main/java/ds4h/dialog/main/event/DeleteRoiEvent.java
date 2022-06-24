@@ -1,6 +1,6 @@
 package ds4h.dialog.main.event;
 
-public class DeleteRoiEvent implements IMainDialogEvent {
+public class DeleteRoiEvent implements MainDialogEvent {
     private final int roiIndex;
 
     public DeleteRoiEvent(int roiIndex) {

@@ -1,6 +1,6 @@
 package ds4h.dialog.main.event;
 
-public class ChangeImageEvent implements IMainDialogEvent {
+public class ChangeImageEvent implements MainDialogEvent {
     private ChangeDirection direction;
     public enum ChangeDirection {
         NEXT,

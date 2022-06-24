@@ -69,17 +69,17 @@ public class XMLService {
         }
         List<Pair<String, List<ProjectRoi>>> projectRoisList = project.getProjectRois().stream().collect(Collectors.groupingBy(ProjectRoi::getPathFile)).entrySet().stream().map(entry -> new Pair<>(entry.getKey(), entry.getValue())).collect(Collectors.toList());
         for (Pair<String, List<ProjectRoi>> pair : projectRoisList) {
-            List<ProjectRoi> projectRoiList = pair.getY();
+            List<ProjectRoi> projectRoiList = pair.getSecond();
             for (ProjectRoi projectRoi : projectRoiList) {
                 Element roiIndexElement = doc.createElement("roiIndex");
                 roiIndexElement.setAttribute("id", String.valueOf(projectRoi.getRoiIndex()));
                 Element x = doc.createElement("x");
                 Element y = doc.createElement("y");
-                x.setTextContent(projectRoi.getPoint().getX().toString());
-                y.setTextContent(projectRoi.getPoint().getY().toString());
+                x.setTextContent(projectRoi.getPoint().getFirst().toString());
+                y.setTextContent(projectRoi.getPoint().getSecond().toString());
                 roiIndexElement.appendChild(x);
                 roiIndexElement.appendChild(y);
-                childElements.stream().filter(childElement -> childElement.getAttribute(FILEPATH).equals(pair.getX())).findFirst().ifPresent(childElement -> childElement.appendChild(roiIndexElement));
+                childElements.stream().filter(childElement -> childElement.getAttribute(FILEPATH).equals(pair.getFirst())).findFirst().ifPresent(childElement -> childElement.appendChild(roiIndexElement));
             }
         }
         try (FileOutputStream output = new FileOutputStream(fileOutputPath)) {
@@ -153,7 +153,7 @@ public class XMLService {
         } catch (ParserConfigurationException | SAXException | IOException e) {
             e.printStackTrace();
         }
-        project.setFilePaths(filePaths.stream().sorted(Comparator.comparingInt(Pair::getX)).map(Pair::getY).collect(Collectors.toList()));
+        project.setFilePaths(filePaths.stream().sorted(Comparator.comparingInt(Pair::getFirst)).map(Pair::getSecond).collect(Collectors.toList()));
         project.setProjectRois(projectRois);
         return project;
     }

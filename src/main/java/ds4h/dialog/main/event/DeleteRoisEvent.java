@@ -9,7 +9,7 @@
 
 package ds4h.dialog.main.event;
 
-public class DeleteRoisEvent implements IMainDialogEvent {
+public class DeleteRoisEvent implements MainDialogEvent {
   private final int[] rois;
   
   public DeleteRoisEvent(int[] rois) {

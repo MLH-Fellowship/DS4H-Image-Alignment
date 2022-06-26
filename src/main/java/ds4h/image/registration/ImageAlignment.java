@@ -208,6 +208,7 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
         if (outputPath.isEmpty()) {
             return;
         }
+        System.out.println("pr" + project.getFilePaths().toString());
         ProjectService.save(project, getImage().getFilePath().substring(0, getImage().getFilePath().lastIndexOf(File.separator)), outputPath);
         JOptionPane.showMessageDialog(null, "The project was saved here: " + outputPath, SAVE_PROJECT_TITLE_SUCCESS, JOptionPane.WARNING_MESSAGE);
     }
@@ -254,13 +255,10 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
     }
 
     private int getImageIndexByFilePath(String pathFile) {
-        return IntStream.range(0, this.getManager().getImageFiles().size())
-                .filter(i -> {
-                    final String pathFileSub = pathFile.substring(pathFile.lastIndexOf(File.separator) + 1);
-                    return this.getManager().getImageFiles().get(i).getPathFile().endsWith(pathFileSub);
-                })
-                .findFirst()
-                .orElse(-1);
+        return IntStream.range(0, this.getManager().getImageFiles().size()).filter(i -> {
+            final String pathFileSub = pathFile.substring(pathFile.lastIndexOf(File.separator) + 1);
+            return this.getManager().getImageFiles().get(i).getPathFile().endsWith(pathFileSub);
+        }).findFirst().orElse(-1);
     }
 
     private void copyCorners() {
@@ -618,6 +616,7 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
                 String[] buttons = {"Yes", "No"};
                 int answer = JOptionPane.showOptionDialog(null, DELETE_ALL_IMAGES, CAREFUL_NOW_TITLE, JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE, null, buttons, buttons[1]);
                 if (answer == 0) {
+                    this.disposeAll();
                     this.run();
                     return;
                 }
@@ -625,16 +624,21 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
                 // remove the image selected
                 this.getRemoveImageDialog().removeImageFile(imageFileIndex);
                 this.getManager().removeImageFile(imageFileIndex);
+                this.getManager().removeOriginalImageFile(imageFileIndex);
             }
             this.image = this.getManager().get(this.getManager().getCurrentIndex());
             this.originalImage = this.getManager().get(this.getManager().getCurrentIndex());
             this.getMainDialog().changeImage(this.image);
             int finalIndex = this.getManager().getCurrentIndex();
-            if (finalIndex < 1) {
-                finalIndex = 1;
+            if (finalIndex < 0) {
+                finalIndex = 0;
             }
             if (this.getManager().getNImages() == 1) {
                 this.getMainDialog().setAutoAlignButtonEnabled(false);
+            }
+            finalIndex = finalIndex + 1;
+            if (this.getManager().getNImages() < finalIndex && this.getManager().getCurrentIndex() == this.getManager().getNImages()) {
+                finalIndex = this.getManager().getNImages();
             }
             this.getMainDialog().setPrevImageButtonEnabled(finalIndex > 1 && this.getManager().getCurrentIndex() != 0);
             this.getMainDialog().setNextImageButtonEnabled(getManager().hasNext());

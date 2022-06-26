@@ -17,9 +17,7 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.*;
 import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.nio.file.*;
 import java.security.CodeSource;
 import java.util.List;
 import java.util.*;
@@ -199,5 +197,19 @@ public class FileService {
             throw new IOException("Entry is outside of the target dir: " + zipEntry.getName());
         }
         return destFile;
+    }
+
+    public static boolean checkIfFileExists(String filePath) {
+        File file = new File(filePath);
+        return file.exists() && !file.isDirectory();
+    }
+
+    public static void deleteItIfExists(String filePath) {
+        Path path = FileSystems.getDefault().getPath(filePath);
+        try {
+            Files.deleteIfExists(path.toAbsolutePath());
+        } catch (IOException x) {
+            System.err.println(x.getMessage());
+        }
     }
 }

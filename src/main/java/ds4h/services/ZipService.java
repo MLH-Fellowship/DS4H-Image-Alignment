@@ -63,10 +63,10 @@ public class ZipService {
     }
 
     public static void zipIt(String dirPath, List<String> files) {
-        String dirName = dirPath + File.separator + getToday() + ".zip";
+        String zipFilePath = dirPath + File.separator + getToday() + ".zip";
         List<String> srcFiles = new ArrayList<>(files);
-        try {
-            FileOutputStream fos = new FileOutputStream(dirName);
+        FileService.deleteItIfExists(zipFilePath);
+        try (FileOutputStream fos = new FileOutputStream(zipFilePath)) {
             try (ZipOutputStream zipOut = new ZipOutputStream(fos)) {
                 for (String srcFile : srcFiles) {
                     File fileToZip = new File(srcFile);
@@ -81,7 +81,6 @@ public class ZipService {
                     }
                 }
             }
-            fos.close();
         } catch (IOException e) {
             e.printStackTrace();
         }

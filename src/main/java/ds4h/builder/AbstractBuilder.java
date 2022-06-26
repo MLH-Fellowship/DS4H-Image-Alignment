@@ -13,13 +13,13 @@ import ds4h.dialog.align.AlignDialog;
 import ds4h.dialog.align.OnAlignDialogEventListener;
 import ds4h.dialog.loading.LoadingDialog;
 import ds4h.dialog.main.event.MainDialogEvent;
-import ds4h.image.buffered.BufferedImage;
 import ds4h.image.manager.ImagesManager;
 import ij.IJ;
 import ij.ImagePlus;
 import ij.VirtualStack;
-import ij.gui.Roi;
 import ij.io.FileSaver;
+import ij.process.ImageConverter;
+import ij.process.ImageProcessor;
 
 import java.awt.*;
 import java.awt.image.ColorModel;
@@ -27,224 +27,227 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
-public abstract class AbstractBuilder {
-  protected static final String TEMP_PATH = "temp";
-  protected static final String TIFF_EXT = ".tiff";
-  protected static final String IMAGE_SIZE_TOO_BIG = "During computation the expected file size overcame imagej file limit. To continue, deselect \"keep all pixel data\" option.";
-  protected static final String IMAGE_SIZE_TOO_BIG_TITLE = "Error: image size too big";
-  
-  private final LoadingDialog loadingDialog;
-  private final OnAlignDialogEventListener listener;
-  private final ImagesManager manager;
-  private final MainDialogEvent event;
-  
-  private AlignDialog alignDialog;
-  private VirtualStack virtualStack;
-  private ImagePlus transformedImagesStack;
-  private Dimension maximumSize;
-  private List<Integer> offsetsX;
-  private List<Integer> offsetsY;
-  private Integer maxOffsetX;
-  private Integer maxOffsetY;
-  private int maxOffsetXIndex;
-  private int maxOffsetYIndex;
-  private int edgeX;
-  private int edgeY;
-  private int edgeX2;
-  private int edgeY2;
-  private List<String> tempImages = new ArrayList<>();
-  private List<Dimension> imagesDimensions;
-  private int sourceImageIndex = -1;
+public abstract class AbstractBuilder<T> {
+    protected static final String TEMP_PATH = "temp";
+    protected static final String TIFF_EXT = ".tiff";
+    protected static final String IMAGE_SIZE_TOO_BIG = "During computation the expected file size overcame imagej file limit. To continue, deselect \"keep all pixel data\" option.";
+    protected static final String IMAGE_SIZE_TOO_BIG_TITLE = "Error: image size too big";
 
-  
-  protected AbstractBuilder(LoadingDialog loadingDialog, OnAlignDialogEventListener listener, ImagesManager manager, MainDialogEvent event) {
-    this.loadingDialog = loadingDialog;
-    this.listener = listener;
-    this.manager = manager;
-    this.event = event;
-    this.imagesDimensions = new ArrayList<>(manager.getImagesDimensions());
-  }
-  
-  public abstract void init();
+    private final LoadingDialog loadingDialog;
+    private final OnAlignDialogEventListener listener;
+    private final ImagesManager manager;
+    private final MainDialogEvent event;
 
-  public abstract boolean check();
+    private AlignDialog alignDialog;
+    private VirtualStack virtualStack;
+    private ImagePlus transformedImagesStack;
+    private Dimension maximumSize;
 
-  /**
-   * Unchecked checkbox "Keep all pixel data" method
-   */
-  public abstract void align();
+    private Dimension finalStack;
+    private List<Integer> offsetsX;
+    private List<Integer> offsetsY;
+    private Integer maxOffsetX;
+    private Integer maxOffsetY;
+    private int maxOffsetXIndex;
+    private int maxOffsetYIndex;
+    private List<String> tempImages = new ArrayList<>();
+    private List<Dimension> imagesDimensions;
+    private int sourceImageIndex = -1;
 
-  /**
-   * Checked checkbox "Keep all pixel data" method
-   */
-  public abstract void alignKeepOriginal();
 
-  public abstract void build();
-  
-  protected void addToVirtualStack(ImagePlus img, VirtualStack virtualStack) {
-    String path = IJ.getDir(TEMP_PATH) + img.getProcessor().hashCode() + TIFF_EXT;
-    new FileSaver(img).saveAsTiff(path);
-    virtualStack.addSlice(new File(path).getName());
-    this.tempImages.add(path);
-  }
-  
-  public LoadingDialog getLoadingDialog() {
-    return this.loadingDialog;
-  }
-  
-  public List<String> getTempImages() {
-    return this.tempImages;
-  }
-  
-  public void setTempImages(List<String> tempImages) {
-    this.tempImages = tempImages;
-  }
-  
-  public AlignDialog getAlignDialog() {
-    return this.alignDialog;
-  }
-  
-  protected void setAlignDialog(AlignDialog alignDialog) {
-    this.alignDialog = alignDialog;
-  }
-  
-  protected OnAlignDialogEventListener getListener() {
-    return this.listener;
-  }
-  
-  protected ImagesManager getManager() {
-    return this.manager;
-  }
-  
-  protected VirtualStack getVirtualStack() {
-    return this.virtualStack;
-  }
-  
-  protected Dimension getMaximumSize() {
-    return this.maximumSize;
-  }
-  
-  protected void setMaximumSize(Dimension maximumSize) {
-    for (int i = 0; i < this.getImagesDimensions().size(); i++) {
-      Dimension dimension = this.getImagesDimensions().get(i);
-      if (dimension.width > maximumSize.width) {
-        maximumSize.width = dimension.width;
-        this.sourceImageIndex = i;
-      }
-      if (dimension.height > maximumSize.height) {
-        maximumSize.height = dimension.height;
-      }
+    protected AbstractBuilder(LoadingDialog loadingDialog, OnAlignDialogEventListener listener, ImagesManager manager, MainDialogEvent event) {
+        this.loadingDialog = loadingDialog;
+        this.listener = listener;
+        this.manager = manager;
+        this.event = event;
+        this.imagesDimensions = new ArrayList<>(manager.getImagesDimensions());
     }
-    this.maximumSize = maximumSize;
-  }
-  
-  protected ImagePlus getTransformedImagesStack() {
-    return this.transformedImagesStack;
-  }
-  
-  protected void setTransformedImagesStack(ImagePlus transformedImagesStack) {
-    this.transformedImagesStack = transformedImagesStack;
-  }
-  
-  public MainDialogEvent getEvent() {
-    return this.event;
-  }
-  
-  protected void setVirtualStack() {
-    this.virtualStack = new VirtualStack(this.getMaximumSize().width, this.getMaximumSize().height, ColorModel.getRGBdefault(), IJ.getDir(TEMP_PATH));
-  }
 
-  public int getSourceImageIndex() {
-    return sourceImageIndex;
-  }
+    public abstract void init();
 
-  public List<Dimension> getImagesDimensions() {
-    return imagesDimensions;
-  }
+    public abstract boolean check();
 
-  protected void setImagesDimensions(List<Dimension> imagesDimensions) {
-    this.imagesDimensions = new ArrayList<>(imagesDimensions);
-  }
+    /**
+     * Unchecked checkbox "Keep all pixel data" method
+     */
+    public abstract void align();
 
-  public List<Integer> getOffsetsX() {
-    return offsetsX;
-  }
+    /**
+     * Checked checkbox "Keep all pixel data" method
+     */
+    public abstract void alignKeepOriginal();
 
-  public List<Integer> getOffsetsY() {
-    return offsetsY;
-  }
+    protected abstract T getSourceImage();
 
-  public Integer getMaxOffsetX() {
-    return maxOffsetX;
-  }
+    protected abstract ImageProcessor getFinalStackImageProcessor();
 
-  public Integer getMaxOffsetY() {
-    return maxOffsetY;
-  }
+    public void build() {
+        try {
+            this.setTransformedImagesStack(new ImagePlus("", this.getVirtualStack()));
+            String filePath = IJ.getDir(TEMP_PATH) + this.getTransformedImagesStack().hashCode() + TIFF_EXT;
+            new ImageConverter(this.getTransformedImagesStack()).convertToRGB();
+            new FileSaver(this.getTransformedImagesStack()).saveAsTiff(filePath);
+            this.getTempImages().add(filePath);
+            this.getLoadingDialog().hideDialog();
+            this.setAlignDialog(new AlignDialog(this.getTransformedImagesStack(), this.getListener()));
+            this.getAlignDialog().pack();
+            this.getAlignDialog().setVisible(true);
+        } catch (Exception e) {
+            IJ.showMessage(e.getMessage());
+        }
+        this.getLoadingDialog().hideDialog();
+    }
 
-  public int getMaxOffsetXIndex() {
-    return maxOffsetXIndex;
-  }
+    protected void addToVirtualStack(ImagePlus img) {
+        String path = IJ.getDir(TEMP_PATH) + img.getProcessor().hashCode() + TIFF_EXT;
+        new FileSaver(img).saveAsTiff(path);
+        this.getVirtualStack().addSlice(new File(path).getName());
+        this.tempImages.add(path);
+    }
 
-  public int getMaxOffsetYIndex() {
-    return maxOffsetYIndex;
-  }
+    protected void initFinalStack() {
+        Dimension finalStack = this.getFinalStack();
+        if (finalStack != null) {
+            this.setVirtualStack(new VirtualStack(this.getFinalStack().width, this.getFinalStack().height, ColorModel.getRGBdefault(), IJ.getDir(TEMP_PATH)));
+            this.addToVirtualStack(new ImagePlus("", this.getFinalStackImageProcessor()));
+        }
+    }
 
-  public int getEdgeX() {
-    return edgeX;
-  }
+    public LoadingDialog getLoadingDialog() {
+        return this.loadingDialog;
+    }
 
-  public int getEdgeY() {
-    return edgeY;
-  }
+    public List<String> getTempImages() {
+        return this.tempImages;
+    }
 
-  public int getEdgeX2() {
-    return edgeX2;
-  }
+    public void setTempImages(List<String> tempImages) {
+        this.tempImages = tempImages;
+    }
 
-  public int getEdgeY2() {
-    return edgeY2;
-  }
+    public AlignDialog getAlignDialog() {
+        return this.alignDialog;
+    }
 
-  public void setOffsetsX(List<Integer> offsetsX) {
-    this.offsetsX = offsetsX;
-  }
+    protected void setAlignDialog(AlignDialog alignDialog) {
+        this.alignDialog = alignDialog;
+    }
 
-  public void setOffsetsY(List<Integer> offsetsY) {
-    this.offsetsY = offsetsY;
-  }
+    protected OnAlignDialogEventListener getListener() {
+        return this.listener;
+    }
 
-  public void setMaxOffsetX(Integer maxOffsetX) {
-    this.maxOffsetX = maxOffsetX;
-  }
+    protected ImagesManager getManager() {
+        return this.manager;
+    }
 
-  public void setMaxOffsetY(Integer maxOffsetY) {
-    this.maxOffsetY = maxOffsetY;
-  }
+    protected VirtualStack getVirtualStack() {
+        return this.virtualStack;
+    }
 
-  public void setMaxOffsetXIndex(int maxOffsetXIndex) {
-    this.maxOffsetXIndex = maxOffsetXIndex;
-  }
+    protected void setVirtualStack(VirtualStack virtualStack) {
+        this.virtualStack = virtualStack;
+    }
 
-  public void setMaxOffsetYIndex(int maxOffsetYIndex) {
-    this.maxOffsetYIndex = maxOffsetYIndex;
-  }
+    protected Dimension getMaximumSize() {
+        return this.maximumSize;
+    }
 
-  public void setEdgeX(int edgeX) {
-    this.edgeX = edgeX;
-  }
+    protected void setMaximumSize(Dimension maximumSize) {
+        for (int i = 0; i < this.getImagesDimensions().size(); i++) {
+            Dimension dimension = this.getImagesDimensions().get(i);
+            if (dimension.width > maximumSize.width) {
+                maximumSize.width = dimension.width;
+                this.sourceImageIndex = i;
+            }
+            if (dimension.height > maximumSize.height) {
+                maximumSize.height = dimension.height;
+            }
+        }
+        this.maximumSize = maximumSize;
+    }
 
-  public void setEdgeY(int edgeY) {
-    this.edgeY = edgeY;
-  }
+    protected ImagePlus getTransformedImagesStack() {
+        return this.transformedImagesStack;
+    }
 
-  public void setEdgeX2(int edgeX2) {
-    this.edgeX2 = edgeX2;
-  }
+    protected void setTransformedImagesStack(ImagePlus transformedImagesStack) {
+        this.transformedImagesStack = transformedImagesStack;
+    }
 
-  public void setEdgeY2(int edgeY2) {
-    this.edgeY2 = edgeY2;
-  }
+    public MainDialogEvent getEvent() {
+        return this.event;
+    }
 
+    public int getSourceImageIndex() {
+        return sourceImageIndex;
+    }
 
+    public List<Dimension> getImagesDimensions() {
+        return imagesDimensions;
+    }
+
+    protected void setImagesDimensions(List<Dimension> imagesDimensions) {
+        this.imagesDimensions = new ArrayList<>(imagesDimensions);
+    }
+
+    public List<Integer> getOffsetsX() {
+        return offsetsX;
+    }
+
+    public void setOffsetsX(List<Integer> offsetsX) {
+        this.offsetsX = offsetsX;
+    }
+
+    public List<Integer> getOffsetsY() {
+        return offsetsY;
+    }
+
+    public void setOffsetsY(List<Integer> offsetsY) {
+        this.offsetsY = offsetsY;
+    }
+
+    public Integer getMaxOffsetX() {
+        return maxOffsetX;
+    }
+
+    public void setMaxOffsetX(Integer maxOffsetX) {
+        this.maxOffsetX = maxOffsetX;
+    }
+
+    public Integer getMaxOffsetY() {
+        return maxOffsetY;
+    }
+
+    public void setMaxOffsetY(Integer maxOffsetY) {
+        this.maxOffsetY = maxOffsetY;
+    }
+
+    public int getMaxOffsetXIndex() {
+        return maxOffsetXIndex;
+    }
+
+    public void setMaxOffsetXIndex(int maxOffsetXIndex) {
+        this.maxOffsetXIndex = maxOffsetXIndex;
+    }
+
+    public int getMaxOffsetYIndex() {
+        return maxOffsetYIndex;
+    }
+
+    public void setMaxOffsetYIndex(int maxOffsetYIndex) {
+        this.maxOffsetYIndex = maxOffsetYIndex;
+    }
+
+    public Dimension getFinalStack() {
+        return finalStack;
+    }
+
+    public void setFinalStack(Dimension finalStack) {
+        this.finalStack = finalStack;
+    }
+
+    public void setSourceImageIndex(int sourceImageIndex) {
+        this.sourceImageIndex = sourceImageIndex;
+    }
 }

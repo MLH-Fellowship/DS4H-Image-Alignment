@@ -9,7 +9,6 @@
 
 package ds4h.builder;
 
-import ds4h.dialog.align.AlignDialog;
 import ds4h.dialog.align.OnAlignDialogEventListener;
 import ds4h.dialog.loading.LoadingDialog;
 import ds4h.dialog.main.event.AutoAlignEvent;
@@ -20,10 +19,8 @@ import ds4h.utils.Pair;
 import ij.IJ;
 import ij.ImagePlus;
 import ij.VirtualStack;
-import ij.io.FileSaver;
 import ij.process.ByteProcessor;
 import ij.process.ColorProcessor;
-import ij.process.ImageConverter;
 import ij.process.ImageProcessor;
 import org.opencv.calib3d.Calib3d;
 import org.opencv.core.Point;
@@ -52,7 +49,7 @@ import static org.opencv.imgcodecs.Imgcodecs.imread;
  * For any issues the owners of the algorithms see fit, post an issue here :
  * https://github.com/Edodums/DS4H-Image-Alignment/issues
  */
-public class BriefBuilder extends AbstractBuilder {
+public class BriefBuilder extends AbstractBuilder<Mat> {
     private final List<Mat> images = new ArrayList<>();
     private final Map<Long, String> pathMap = new HashMap<>();
 
@@ -68,37 +65,27 @@ public class BriefBuilder extends AbstractBuilder {
         this.importImages();
         this.setImagesDimensions(this.getManager().getImagesDimensions());
         this.setMaximumSize(new Dimension());
-        this.setVirtualStack();
+        this.setFinalStack(new Dimension(this.getMaximumSize().width, this.getMaximumSize().height));
         this.cacheTransformedImages();
         this.setOffsets();
+        this.preInitFinalStack();
         this.initFinalStack();
     }
 
-    private void initFinalStack() {
-        Dimension finalStack = this.getFinalStack();
-        if (finalStack != null) {
-            final ImageProcessor processor = this.getFinalStackImageProcessor(finalStack);
-            this.setVirtualStack();
-            this.addToVirtualStack(new ImagePlus("", processor), this.getVirtualStack());
-        }
-    }
-
-    private Dimension getFinalStack() {
-        Dimension finalStack = new Dimension(this.getMaximumSize().width, this.getMaximumSize().height);
-        finalStack.width = finalStack.width + this.getMaxOffsetX();
-        finalStack.height += this.getSourceImage().height() == this.getMaximumSize().height ? this.getMaxOffsetY() : 0;
+    private void preInitFinalStack() {
+        this.getFinalStack().width = this.getFinalStack().width + this.getMaxOffsetX();
+        this.getFinalStack().height += this.getSourceImage().height() == this.getMaximumSize().height ? this.getMaxOffsetY() : 0;
         // The final stack of the image is exceeding the maximum size of the images for imagej (see http://imagej.1557.x6.nabble.com/Large-image-td5015380.html)
-        if (((double) finalStack.width * finalStack.height) > Integer.MAX_VALUE) {
+        if (((double) this.getFinalStack().width * this.getFinalStack().height) > Integer.MAX_VALUE) {
             JOptionPane.showMessageDialog(null, IMAGE_SIZE_TOO_BIG, IMAGE_SIZE_TOO_BIG_TITLE, JOptionPane.ERROR_MESSAGE);
             this.getLoadingDialog().hideDialog(); // take care of this
-            return null;
         }
-        return finalStack;
     }
 
-    private ImageProcessor getFinalStackImageProcessor(Dimension finalStack) {
+    @Override
+    protected ImageProcessor getFinalStackImageProcessor() {
         final ImageProcessor processor;
-        processor = matToImagePlus(this.getSourceImage()).getProcessor().createProcessor(finalStack.width, finalStack.height);
+        processor = matToImagePlus(this.getSourceImage()).getProcessor().createProcessor(this.getFinalStack().width, this.getFinalStack().height);
         processor.insert(matToImagePlus(this.getSourceImage()).getProcessor(), this.getMaxOffsetX(), this.getMaxOffsetY());
         return processor;
     }
@@ -121,15 +108,16 @@ public class BriefBuilder extends AbstractBuilder {
                 if (index == this.getSourceImageIndex()) continue;
                 Mat image = this.getTransformedImages().get(index);
                 if (image == null) continue;
-                ImageProcessor newProcessor = new ColorProcessor(this.getMaximumSize().width, this.getMaximumSize().height);
+                ImageProcessor newProcessor = new ColorProcessor(this.getFinalStack().width, this.getMaximumSize().height);
                 ImagePlus transformedImage = this.matToImagePlus(image);
                 BufferedImage transformedOriginalImage = this.getManager().getOriginal(index, true);
-                this.setEdges(this.getMapOfPoints().get(new Pair<>(this.getSourceImageIndex(), index)));
+
                 int offsetXOriginal = 0;
                 if (this.getOffsetsX().get(index) < 0) {
                     offsetXOriginal = Math.abs(this.getOffsetsX().get(index));
                 }
                 offsetXOriginal += this.getMaxOffsetXIndex() != index ? this.getMaxOffsetX() : 0;
+
                 int offsetXTransformed = 0;
                 if (this.getOffsetsX().get(index) > 0 && this.getMaxOffsetXIndex() != index) {
                     offsetXTransformed = Math.abs(this.getOffsetsX().get(index));
@@ -137,8 +125,8 @@ public class BriefBuilder extends AbstractBuilder {
                 offsetXTransformed += this.getMaxOffsetX();
                 int difference = this.evaluateDifference(index);
                 newProcessor.insert(transformedOriginalImage.getProcessor(), offsetXOriginal, difference);
-                newProcessor.insert(transformedImage.getProcessor(), offsetXTransformed, (this.getMaxOffsetY()));
-                this.addToVirtualStack(new ImagePlus("", newProcessor), this.getVirtualStack());
+                newProcessor.insert(transformedImage.getProcessor(), offsetXTransformed, this.getMaxOffsetY());
+                this.addToVirtualStack(new ImagePlus("", newProcessor));
             }
         } catch (Exception e) {
             IJ.showMessage("Not all the images will be put in the aligned stack, something went wrong, check your image because it seems that we couldn't find a relation: " + e.getMessage());
@@ -191,40 +179,21 @@ public class BriefBuilder extends AbstractBuilder {
 
     @Override
     public void align() {
-        BufferedImage sourceImg = this.getManager().getOriginal(0, true);
-        VirtualStack virtualStack = new VirtualStack(sourceImg.getWidth(), sourceImg.getHeight(), ColorModel.getRGBdefault(), IJ.getDir(TEMP_PATH));
-        this.addToVirtualStack(sourceImg, virtualStack);
-        for (int index = 1; index < this.getManager().getNImages(); index++) {
+        this.setSourceImageIndex(0);
+        this.setVirtualStack(new VirtualStack(getSourceImage().width(), getSourceImage().height(), ColorModel.getRGBdefault(), IJ.getDir(TEMP_PATH)));
+        this.addToVirtualStack(matToImagePlus(getSourceImage()));
+        for (int index = 1; index < this.getImages().size(); index++) {
             Mat image = transformImage(index);
             if (image == null) continue;
             ImagePlus transformedImage = this.matToImagePlus(image);
-            this.addToVirtualStack(transformedImage, virtualStack);
+            this.addToVirtualStack(transformedImage);
         }
-    }
-
-    @Override
-    public void build() {
-        try {
-            this.setTransformedImagesStack(new ImagePlus("", this.getVirtualStack()));
-            String filePath = IJ.getDir(TEMP_PATH) + this.getTransformedImagesStack().hashCode() + TIFF_EXT;
-            new ImageConverter(this.getTransformedImagesStack()).convertToRGB();
-            new FileSaver(this.getTransformedImagesStack()).saveAsTiff(filePath);
-            this.getTempImages().add(filePath);
-            this.getLoadingDialog().hideDialog();
-            this.setAlignDialog(new AlignDialog(this.getTransformedImagesStack(), this.getListener()));
-            this.getAlignDialog().pack();
-            this.getAlignDialog().setVisible(true);
-        } catch (Exception e) {
-            IJ.showMessage(e.getMessage());
-        }
-        this.getLoadingDialog().hideDialog();
     }
 
     private int evaluateDifference(int transformedImageIndex) {
-        // (this.getMaxOffsetYIndex().getRoisAsArray()[0].getYBase() - this.get(index).getRoisAsArray()[0].getYBase())
         Pair<List<Point>, List<Point>> maxPairOfPoints = this.getMapOfPoints().get(new Pair<>(this.getSourceImageIndex(), this.getMaxOffsetYIndex()));
         Pair<List<Point>, List<Point>> transformedPairOfPoints = this.getMapOfPoints().get(new Pair<>(this.getSourceImageIndex(), transformedImageIndex));
-        return (int) (maxPairOfPoints.getFirst().get(0).y - transformedPairOfPoints.getFirst().get(0).y);
+        return (int) (maxPairOfPoints.getSecond().get(0).y - transformedPairOfPoints.getSecond().get(0).y);
     }
 
     private Mat getHomography(List<DMatch> goodMatches, List<KeyPoint> firstKeyPoints, List<KeyPoint> secondKeyPoints, int indexTransformedImage) {
@@ -316,7 +285,8 @@ public class BriefBuilder extends AbstractBuilder {
         return listOfGoodMatches;
     }
 
-    private Mat getSourceImage() {
+    @Override
+    protected Mat getSourceImage() {
         return this.getImages().get(this.getSourceImageIndex());
     }
 
@@ -324,29 +294,6 @@ public class BriefBuilder extends AbstractBuilder {
         String value = this.pathMap.get(oldAddress);
         this.pathMap.remove(oldAddress);
         this.pathMap.put(newAddress, value);
-    }
-
-    private void setEdges(Pair<List<Point>, List<Point>> pointsPairList) {
-        this.setEdgeX(-1);
-        this.setEdgeY(-1);
-        for (Point point : pointsPairList.getFirst()) {
-            if (this.getEdgeX() == -1 || this.getEdgeX() > point.x) {
-                this.setEdgeX((int) point.x);
-            }
-            if (this.getEdgeY() == -1 || this.getEdgeY() > point.y) {
-                this.setEdgeY((int) point.y);
-            }
-        }
-        this.setEdgeX2(-1);
-        this.setEdgeY2(-1);
-        for (Point point : pointsPairList.getSecond()) {
-            if (this.getEdgeX2() == -1 || this.getEdgeX2() > point.x) {
-                this.setEdgeX2((int) point.x);
-            }
-            if (this.getEdgeY2() == -1 || this.getEdgeY2() > point.y) {
-                this.setEdgeY2((int) point.y);
-            }
-        }
     }
 
     private void setOffsets() {

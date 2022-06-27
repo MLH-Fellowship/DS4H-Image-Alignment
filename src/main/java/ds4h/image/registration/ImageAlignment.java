@@ -10,6 +10,7 @@
 package ds4h.image.registration;
 
 import ds4h.builder.AbstractBuilder;
+import ds4h.builder.AlignBuilder;
 import ds4h.builder.BriefBuilder;
 import ds4h.builder.LeastSquareTransformationBuilder;
 import ds4h.dialog.about.AboutDialog;
@@ -51,6 +52,7 @@ import ij.io.SaveDialog;
 import ij.plugin.frame.RoiManager;
 import loci.common.enumeration.EnumException;
 import loci.formats.UnknownFormatException;
+import org.opencv.core.Mat;
 
 import javax.swing.*;
 import java.awt.*;
@@ -394,7 +396,7 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
      * TODO: refactor codebase when you have time
      **/
     private void autoAlign(AutoAlignEvent event) {
-        AbstractBuilder builder = new BriefBuilder(this.getLoadingDialog(), this.getManager(), event, this);
+        AbstractBuilder<Mat> builder = new BriefBuilder(this.getLoadingDialog(), this.getManager(), event, this);
         builder.getLoadingDialog().showDialog();
         Utilities.setTimeout(() -> {
             try {
@@ -408,7 +410,7 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
     }
 
     private void align(AlignEvent event) {
-        AbstractBuilder builder = new LeastSquareTransformationBuilder(this.getLoadingDialog(), this.getManager(), event, this);
+        AbstractBuilder<BufferedImage> builder = new LeastSquareTransformationBuilder(this.getLoadingDialog(), this.getManager(), event, this);
         builder.getLoadingDialog().showDialog();
         Utilities.setTimeout(() -> {
             try {
@@ -420,11 +422,11 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
         }, 10);
     }
 
-    private void alignHandler(AbstractBuilder builder) {
+    private void alignHandler(AlignBuilder builder) {
         builder.setTempImages(this.tempImages);
         builder.init();
         if (builder.check()) {
-            if (((RegistrationEvent) builder.getEvent()).isKeepOriginal()) {
+            if (builder.getEvent().isKeepOriginal()) {
                 builder.alignKeepOriginal();
             } else {
                 builder.align();

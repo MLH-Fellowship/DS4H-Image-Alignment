@@ -4,6 +4,7 @@ import ds4h.dialog.align.OnAlignDialogEventListener;
 import ds4h.dialog.align.setting.SettingDialog;
 import ds4h.dialog.loading.LoadingDialog;
 import ds4h.dialog.main.event.MainDialogEvent;
+import ds4h.dialog.main.event.RegistrationEvent;
 import ds4h.image.buffered.BufferedImage;
 import ds4h.image.manager.ImagesManager;
 import ds4h.image.registration.LeastSquareImageTransformation;
@@ -30,7 +31,7 @@ public class LeastSquareTransformationBuilder extends AbstractBuilder<BufferedIm
     private BufferedImage sourceImage;
 
 
-    public LeastSquareTransformationBuilder(LoadingDialog loadingDialog, ImagesManager manager, MainDialogEvent event, OnAlignDialogEventListener listener) {
+    public LeastSquareTransformationBuilder(LoadingDialog loadingDialog, ImagesManager manager, RegistrationEvent event, OnAlignDialogEventListener listener) {
         super(loadingDialog, listener, manager, event);
     }
 

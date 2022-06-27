@@ -5,7 +5,6 @@ import ds4h.image.model.Project;
 
 import java.io.File;
 import java.util.*;
-import java.util.stream.Collectors;
 
 public class ProjectService {
     private static final String ROIS_AND_INDEXES = "rois_and_indexes";
@@ -22,24 +21,8 @@ public class ProjectService {
         final Set<String> files = FileService.getAllFiles(unzippedFile);
         Optional<String> xmlPath = files.stream().filter(file -> file.endsWith("xml")).findFirst();
         if (xmlPath.isPresent()) {
-            project = extractFilePaths(files, XMLService.loadProject(xmlPath.get()));
+            project = XMLService.loadProject(xmlPath.get());
         }
-        return project;
-    }
-
-    private static Project extractFilePaths(Set<String> files, Project project) {
-        List<String> filePaths = files.stream().filter(file -> !file.endsWith("xml")).sorted().sorted(Comparator.comparing(item -> {
-            int value = 0;
-            for (String filePath : project.getFilePaths()) {
-                if (filePath.endsWith(item)) {
-                    value = 1;
-                    break;
-                }
-            }
-            return value;
-        })).collect(Collectors.toList());
-        project.setFilePaths(filePaths);
-
         return project;
     }
 

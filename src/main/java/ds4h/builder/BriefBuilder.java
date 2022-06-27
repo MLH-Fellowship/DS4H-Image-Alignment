@@ -110,26 +110,29 @@ public class BriefBuilder extends AbstractBuilder<Mat> {
                 if (image == null) continue;
                 ImageProcessor newProcessor = new ColorProcessor(this.getFinalStack().width, this.getMaximumSize().height);
                 ImagePlus transformedImage = this.matToImagePlus(image);
-                BufferedImage transformedOriginalImage = this.getManager().getOriginal(index, true);
-
-                int offsetXOriginal = 0;
-                if (this.getOffsetsX().get(index) < 0) {
-                    offsetXOriginal = Math.abs(this.getOffsetsX().get(index));
-                }
-                offsetXOriginal += this.getMaxOffsetXIndex() != index ? this.getMaxOffsetX() : 0;
-
                 int offsetXTransformed = 0;
                 if (this.getOffsetsX().get(index) > 0 && this.getMaxOffsetXIndex() != index) {
                     offsetXTransformed = Math.abs(this.getOffsetsX().get(index));
                 }
                 offsetXTransformed += this.getMaxOffsetX();
-                int difference = this.evaluateDifference(index);
-                newProcessor.insert(transformedOriginalImage.getProcessor(), offsetXOriginal, difference);
                 newProcessor.insert(transformedImage.getProcessor(), offsetXTransformed, this.getMaxOffsetY());
                 this.addToVirtualStack(new ImagePlus("", newProcessor));
             }
         } catch (Exception e) {
             IJ.showMessage("Not all the images will be put in the aligned stack, something went wrong, check your image because it seems that we couldn't find a relation: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public void align() {
+        this.setSourceImageIndex(0);
+        this.setVirtualStack(new VirtualStack(getSourceImage().width(), getSourceImage().height(), ColorModel.getRGBdefault(), IJ.getDir(TEMP_PATH)));
+        this.addToVirtualStack(matToImagePlus(getSourceImage()));
+        for (int index = 1; index < this.getImages().size(); index++) {
+            Mat image = transformImage(index);
+            if (image == null) continue;
+            ImagePlus transformedImage = this.matToImagePlus(image);
+            this.addToVirtualStack(transformedImage);
         }
     }
 
@@ -167,7 +170,7 @@ public class BriefBuilder extends AbstractBuilder<Mat> {
             final Mat perspectiveM = Imgproc.getPerspectiveTransform(points, dest);
             Mat warpedImage = new Mat();
             // Literally takes the secondImage, the perspective transformation matrix, the size of the first image, then warps the second image to fit the first, at least that's what I think is happening
-            Imgproc.warpPerspective(secondImage, warpedImage, perspectiveM, new Size(this.getMaximumSize().width, this.getMaximumSize().height), Imgproc.WARP_INVERSE_MAP, Core.BORDER_CONSTANT);
+            Imgproc.warpPerspective(secondImage, warpedImage, perspectiveM, new Size(this.getFinalStack().width, this.getMaximumSize().height), Imgproc.WARP_INVERSE_MAP, Core.BORDER_CONSTANT);
             // not the nicest solution, but obviously the image's data address changes after but the image it's the same, so to retrieve the same path I had to do this
             this.replaceKey(secondImage.dataAddr(), warpedImage.dataAddr());
             // then to all the things need to create a virtual stack of images
@@ -175,25 +178,6 @@ public class BriefBuilder extends AbstractBuilder<Mat> {
         }
         IJ.showMessage("Not enough matches");
         return null;
-    }
-
-    @Override
-    public void align() {
-        this.setSourceImageIndex(0);
-        this.setVirtualStack(new VirtualStack(getSourceImage().width(), getSourceImage().height(), ColorModel.getRGBdefault(), IJ.getDir(TEMP_PATH)));
-        this.addToVirtualStack(matToImagePlus(getSourceImage()));
-        for (int index = 1; index < this.getImages().size(); index++) {
-            Mat image = transformImage(index);
-            if (image == null) continue;
-            ImagePlus transformedImage = this.matToImagePlus(image);
-            this.addToVirtualStack(transformedImage);
-        }
-    }
-
-    private int evaluateDifference(int transformedImageIndex) {
-        Pair<List<Point>, List<Point>> maxPairOfPoints = this.getMapOfPoints().get(new Pair<>(this.getSourceImageIndex(), this.getMaxOffsetYIndex()));
-        Pair<List<Point>, List<Point>> transformedPairOfPoints = this.getMapOfPoints().get(new Pair<>(this.getSourceImageIndex(), transformedImageIndex));
-        return (int) (maxPairOfPoints.getSecond().get(0).y - transformedPairOfPoints.getSecond().get(0).y);
     }
 
     private Mat getHomography(List<DMatch> goodMatches, List<KeyPoint> firstKeyPoints, List<KeyPoint> secondKeyPoints, int indexTransformedImage) {

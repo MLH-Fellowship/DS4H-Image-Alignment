@@ -58,8 +58,7 @@ public class XMLService {
         Document doc = docBuilder.newDocument();
         Element rootElement = doc.createElement(rootElementName);
         doc.appendChild(rootElement);
-
-        List<Element> childElements = new ArrayList<>();
+        final List<Element> childElements = new ArrayList<>();
         for (String filePath : project.getFilePaths()) {
             Element childElement = doc.createElement(childName);
             rootElement.appendChild(childElement);
@@ -67,7 +66,7 @@ public class XMLService {
             childElement.setAttribute("id", String.valueOf(project.getFilePaths().indexOf(filePath)));
             childElements.add(childElement);
         }
-        List<Pair<String, List<ProjectRoi>>> projectRoisList = project.getProjectRois().stream().collect(Collectors.groupingBy(ProjectRoi::getPathFile)).entrySet().stream().map(entry -> new Pair<>(entry.getKey(), entry.getValue())).collect(Collectors.toList());
+        final List<Pair<String, List<ProjectRoi>>> projectRoisList = project.getProjectRois().stream().collect(Collectors.groupingBy(ProjectRoi::getPathFile)).entrySet().stream().map(entry -> new Pair<>(entry.getKey(), entry.getValue())).collect(Collectors.toList());
         for (Pair<String, List<ProjectRoi>> pair : projectRoisList) {
             List<ProjectRoi> projectRoiList = pair.getSecond();
             for (ProjectRoi projectRoi : projectRoiList) {

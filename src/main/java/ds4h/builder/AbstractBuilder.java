@@ -12,7 +12,7 @@ package ds4h.builder;
 import ds4h.dialog.align.AlignDialog;
 import ds4h.dialog.align.OnAlignDialogEventListener;
 import ds4h.dialog.loading.LoadingDialog;
-import ds4h.dialog.main.event.MainDialogEvent;
+import ds4h.dialog.main.event.RegistrationEvent;
 import ds4h.image.manager.ImagesManager;
 import ij.IJ;
 import ij.ImagePlus;
@@ -27,7 +27,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
-public abstract class AbstractBuilder<T> {
+public abstract class AbstractBuilder<T> implements AlignBuilder {
     protected static final String TEMP_PATH = "temp";
     protected static final String TIFF_EXT = ".tiff";
     protected static final String IMAGE_SIZE_TOO_BIG = "During computation the expected file size overcame imagej file limit. To continue, deselect \"keep all pixel data\" option.";
@@ -36,7 +36,7 @@ public abstract class AbstractBuilder<T> {
     private final LoadingDialog loadingDialog;
     private final OnAlignDialogEventListener listener;
     private final ImagesManager manager;
-    private final MainDialogEvent event;
+    private final RegistrationEvent event;
 
     private AlignDialog alignDialog;
     private VirtualStack virtualStack;
@@ -55,7 +55,7 @@ public abstract class AbstractBuilder<T> {
     private int sourceImageIndex = -1;
 
 
-    protected AbstractBuilder(LoadingDialog loadingDialog, OnAlignDialogEventListener listener, ImagesManager manager, MainDialogEvent event) {
+    protected AbstractBuilder(LoadingDialog loadingDialog, OnAlignDialogEventListener listener, ImagesManager manager, RegistrationEvent event) {
         this.loadingDialog = loadingDialog;
         this.listener = listener;
         this.manager = manager;
@@ -175,12 +175,16 @@ public abstract class AbstractBuilder<T> {
         this.transformedImagesStack = transformedImagesStack;
     }
 
-    public MainDialogEvent getEvent() {
+    public RegistrationEvent getEvent() {
         return this.event;
     }
 
     public int getSourceImageIndex() {
         return sourceImageIndex;
+    }
+
+    public void setSourceImageIndex(int sourceImageIndex) {
+        this.sourceImageIndex = sourceImageIndex;
     }
 
     public List<Dimension> getImagesDimensions() {
@@ -245,9 +249,5 @@ public abstract class AbstractBuilder<T> {
 
     public void setFinalStack(Dimension finalStack) {
         this.finalStack = finalStack;
-    }
-
-    public void setSourceImageIndex(int sourceImageIndex) {
-        this.sourceImageIndex = sourceImageIndex;
     }
 }

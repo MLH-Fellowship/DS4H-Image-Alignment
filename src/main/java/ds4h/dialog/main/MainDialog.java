@@ -12,7 +12,6 @@ import ij.gui.ImageWindow;
 import ij.gui.Overlay;
 import ij.gui.Roi;
 import ij.gui.RoiListener;
-import ij.plugin.Zoom;
 import ij.plugin.frame.RoiManager;
 
 import javax.swing.*;
@@ -35,15 +34,16 @@ public class MainDialog extends ImageWindow {
     private static final String SCALE_OPTION = "scale";
     public static BufferedImage currentImage = null; // Use a singleton instead or rethink the data flow
     private final OnMainDialogEventListener eventListener;
-    private final JButton btnCopyCorners;
-    private final JCheckBox checkShowPreview;
-    private final JButton btnDeleteRoi;
-    private final JButton btnPrevImage;
-    private final JButton btnNextImage;
-    private final JButton btnAlignImages;
-    private final JButton btnAutoAlignImages;
-    private final JCheckBox checkKeepOriginal;
-    private final DefaultListModel<String> jListRoisModel;
+
+    private final JButton btnCopyCorners = new JButton("COPY CORNERS");
+    private final JButton btnAlignImages = new JButton("ALIGN IMAGES VIA CORNERS");
+    private final JButton btnAutoAlignImages = new JButton("AUTO ALIGN IMAGES");
+    private final JCheckBox checkKeepOriginal = new JCheckBox("Keep all pixel data");
+    private final JCheckBox checkShowPreview = new JCheckBox("Show preview window");
+    private final JButton btnDeleteRoi = new JButton("DELETE CORNER");
+    private final JButton btnPrevImage = new JButton("PREV IMAGE");
+    private final JButton btnNextImage = new JButton("NEXT IMAGE");
+    private final DefaultListModel<String> jListRoisModel = new DefaultListModel<>();
     public JList<String> jListRois;
     private BufferedImage image;
     private boolean mouseOverCanvas;
@@ -60,155 +60,105 @@ public class MainDialog extends ImageWindow {
     public MainDialog(BufferedImage plus, OnMainDialogEventListener listener) {
         super(plus, new CustomCanvas(plus));
         this.image = plus;
+        this.eventListener = listener;
         final CustomCanvas canvas = (CustomCanvas) getCanvas();
-        this.checkShowPreview = new JCheckBox("Show preview window");
-        this.checkShowPreview.setToolTipText("Show a preview window");
-        this.btnDeleteRoi = new JButton("DELETE CORNER");
-        this.btnDeleteRoi.setToolTipText("Delete selected current corner point");
-        this.btnDeleteRoi.setEnabled(false);
-        this.btnPrevImage = new JButton("PREV IMAGE");
-        this.btnPrevImage.setToolTipText("Select previous image in the stack");
-        this.btnNextImage = new JButton("NEXT IMAGE");
-        this.btnNextImage.setToolTipText("Select next image in the stack");
-        this.btnAlignImages = new JButton("ALIGN IMAGES VIA CORNERS");
-        this.btnAlignImages.setToolTipText("Align the images based on the added corner points");
-        this.btnAlignImages.setEnabled(false);
-        this.btnAutoAlignImages = new JButton("AUTO ALIGN IMAGES");
-        this.btnAutoAlignImages.setToolTipText("Align the images automatically without thinking what it is needed to be done");
-        this.btnAutoAlignImages.setEnabled(true);
-        this.checkKeepOriginal = new JCheckBox("Keep all pixel data");
-        this.checkKeepOriginal.setToolTipText("Keep the original images boundaries, applying stitching where necessary. NOTE: this operation is resource-intensive.");
-        this.checkKeepOriginal.setSelected(true);
-        this.checkKeepOriginal.setEnabled(false);
         // Remove the canvas from the window, to add it later
         this.removeAll();
-        // Training panel (left side of the GUI)
-        final JPanel cornersJPanel = new JPanel();
-        cornersJPanel.setBorder(BorderFactory.createTitledBorder("Corners"));
-        final GridBagLayout trainingLayout = new GridBagLayout();
-        final GridBagConstraints trainingConstraints = new GridBagConstraints();
-        trainingConstraints.anchor = GridBagConstraints.NORTHWEST;
-        trainingConstraints.fill = GridBagConstraints.HORIZONTAL;
-        trainingConstraints.gridwidth = 1;
-        trainingConstraints.gridheight = 1;
-        trainingConstraints.gridx = 0;
-        trainingConstraints.gridy = 0;
-        cornersJPanel.setLayout(trainingLayout);
-        JLabel cornerLabel = new JLabel("Press \"C\" to add a corner point");
-        cornerLabel.setForeground(Color.gray);
-        cornersJPanel.add(cornerLabel, trainingConstraints);
-        trainingConstraints.gridy++;
-        trainingConstraints.gridy++;
-        this.jListRois = new JList<>();
-        JScrollPane scrollPane = new JScrollPane(this.jListRois);
-        scrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
-        scrollPane.setPreferredSize(new Dimension(180, 180));
-        scrollPane.setMinimumSize(new Dimension(180, 180));
-        scrollPane.setMaximumSize(new Dimension(180, 180));
-        cornersJPanel.add(scrollPane, trainingConstraints);
-        trainingConstraints.insets = new Insets(5, 0, 10, 0);
-        trainingConstraints.gridy++;
-        this.jListRois.setBackground(Color.white);
-        this.jListRois.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        this.btnCopyCorners = new JButton();
-        this.btnCopyCorners.setText("COPY CORNERS");
-        this.btnCopyCorners.setEnabled(false);
-        this.btnCopyCorners.setToolTipText("Select from which image you'll copy-paste the corners");
-        cornersJPanel.add(this.btnCopyCorners, trainingConstraints);
-        cornersJPanel.setLayout(trainingLayout);
-        // Options panel
-        JPanel actionsJPanel = new JPanel();
-        actionsJPanel.setBorder(BorderFactory.createTitledBorder("Actions"));
-        final GridBagLayout actionsLayout = new GridBagLayout();
-        final GridBagConstraints actionsConstraints = new GridBagConstraints();
-        actionsConstraints.anchor = GridBagConstraints.NORTHWEST;
-        actionsConstraints.fill = GridBagConstraints.HORIZONTAL;
-        actionsConstraints.weightx = 1;
-        actionsConstraints.gridx = 0;
-        actionsConstraints.insets = new Insets(5, 5, 6, 6);
-        actionsJPanel.setLayout(actionsLayout);
-        final JLabel changeImageLabel = new JLabel("Press \"A\" or \"D\" to change image", LEFT);
-        changeImageLabel.setForeground(Color.gray);
-        actionsJPanel.add(changeImageLabel, actionsConstraints);
-        actionsJPanel.add(checkShowPreview, actionsConstraints);
-        actionsJPanel.add(btnDeleteRoi, actionsConstraints);
-        actionsJPanel.add(btnPrevImage, actionsConstraints);
-        actionsJPanel.add(btnNextImage, actionsConstraints);
-        actionsJPanel.setLayout(actionsLayout);
-        // Options panel
-        final JPanel alignJPanel = new JPanel();
-        alignJPanel.setBorder(BorderFactory.createTitledBorder("Alignment"));
-        final GridBagLayout alignLayout = new GridBagLayout();
-        final GridBagConstraints alignConstraints = new GridBagConstraints();
-        alignConstraints.anchor = GridBagConstraints.NORTHWEST;
-        alignConstraints.fill = GridBagConstraints.HORIZONTAL;
-        alignConstraints.weightx = 1;
-        alignConstraints.gridx = 0;
-        alignConstraints.insets = new Insets(5, 5, 6, 6);
-        alignJPanel.setLayout(alignLayout);
-        alignJPanel.add(this.checkKeepOriginal, actionsConstraints);
-        alignJPanel.add(this.btnAlignImages, actionsConstraints);
-        alignJPanel.add(this.btnAutoAlignImages, actionsConstraints);
-        alignJPanel.setLayout(alignLayout);
-        // Buttons panel
-        final JPanel buttonsPanel = new JPanel();
-        buttonsPanel.setBackground(Color.GRAY);
-        buttonsPanel.setLayout(new BoxLayout(buttonsPanel, BoxLayout.Y_AXIS));
-        buttonsPanel.add(cornersJPanel);
-        buttonsPanel.add(actionsJPanel);
-        buttonsPanel.add(alignJPanel);
+
+        this.fixMaximize();
+        final Panel all = new Panel();
+        all.setBackground(new Color(238, 238, 238));
         final GridBagLayout layout = new GridBagLayout();
         final GridBagConstraints allConstraints = new GridBagConstraints();
-        final Panel menu = new Panel();
-        final JPanel jMenu = new JPanel();
-        final Panel all = new Panel();
+        allConstraints.fill = GridBagConstraints.BOTH;
         all.setLayout(layout);
-        // sets little of padding to ensure that the @ImagePlus text is shown and not covered by the panel
-        allConstraints.insets = new Insets(5, 0, 0, 0);
-        allConstraints.anchor = GridBagConstraints.NORTHWEST;
-        allConstraints.gridwidth = 1;
-        allConstraints.gridheight = 1;
+
+        final Panel menu = new Panel();
+        menu.add(getMenuPanel());
+        menu.setBackground(new Color(238, 238, 238));
         allConstraints.gridx = 0;
         allConstraints.gridy = 0;
-        allConstraints.weightx = 0;
-        allConstraints.weighty = 0;
-        all.add(buttonsPanel, allConstraints);
-        allConstraints.gridx++;
+        allConstraints.gridwidth = 1;
+        allConstraints.gridheight = 1;
         allConstraints.weightx = 1;
         allConstraints.weighty = 1;
-        all.setBackground(new Color(238, 238, 238));
+        all.add(menu, allConstraints);
+
+        final JPanel leftPanel = new JPanel();
+        final GridBagLayout leftLayout = new GridBagLayout();
+        final GridBagConstraints leftConstraints = new GridBagConstraints();
+        leftPanel.setBackground(Color.GRAY);
+        leftPanel.setLayout(leftLayout);
+
+        final JPanel cornersPanel = this.getCornersPanel();
+        leftConstraints.gridx = 0;
+        leftConstraints.gridy = 0;
+        leftConstraints.fill = GridBagConstraints.BOTH;
+        leftConstraints.gridwidth = 1;
+        leftConstraints.gridheight = 1;
+        leftConstraints.weightx = 1;
+        leftConstraints.weighty = 1;
+        leftPanel.add(cornersPanel, leftConstraints);
+
+        final JPanel actionsPanel = this.getActionsPanel();
+        leftConstraints.gridx = 0;
+        leftConstraints.gridy = 1;
+        leftConstraints.fill = GridBagConstraints.BOTH;
+        leftConstraints.gridwidth = 1;
+        leftConstraints.gridheight = 1;
+        leftConstraints.weightx = 1;
+        leftConstraints.weighty = 1;
+        leftPanel.add(actionsPanel, leftConstraints);
+
+        final JPanel alignPanel = this.getAlignPanel();
+        leftConstraints.gridx = 0;
+        leftConstraints.gridy = 2;
+        leftConstraints.fill = GridBagConstraints.BOTH;
+        leftConstraints.gridwidth = 1;
+        leftConstraints.gridheight = 1;
+        leftConstraints.weightx = 1;
+        leftConstraints.weighty = 1;
+        leftPanel.add(alignPanel, leftConstraints);
+
+        allConstraints.gridx = 0;
+        allConstraints.gridy = 1;
+        allConstraints.gridwidth = 1;
+        allConstraints.gridheight = 3;
+        allConstraints.fill = GridBagConstraints.BOTH;
+        all.add(leftPanel, allConstraints);
+
+        allConstraints.gridx = 1;
+        allConstraints.gridy = 1;
+        allConstraints.gridwidth = 3;
+        allConstraints.gridheight = 3;
+        allConstraints.fill = GridBagConstraints.BOTH;
         all.add(canvas, allConstraints);
-        final BorderLayout winLayout = new BorderLayout();
-        this.setLayout(winLayout);
-        jMenu.add(getMenu());
-        menu.setLayout(new BorderLayout());
-        menu.add(jMenu, BorderLayout.WEST);
-        menu.setBackground(new Color(238, 238, 238));
-        this.add(menu, BorderLayout.PAGE_START);
-        this.add(all, BorderLayout.PAGE_END);
+
+        final GridBagLayout parentLayout = new GridBagLayout();
+        final GridBagConstraints parentConstraints = new GridBagConstraints();
+        parentConstraints.fill = GridBagConstraints.BOTH;
+        parentConstraints.weightx = 1;
+        parentConstraints.weighty = 1;
+        parentConstraints.gridwidth = 1;
+        parentConstraints.gridheight = 1;
+        this.setLayout(parentLayout);
+        this.add(all, parentConstraints);
+
         // Propagate all listeners
-        Stream.<Component>of(all, buttonsPanel).forEach(component -> Arrays.stream(getKeyListeners()).forEach(component::addKeyListener));
-        this.eventListener = listener;
-        this.btnCopyCorners.addActionListener(e -> this.eventListener.onMainDialogEvent(new CopyCornersEvent()));
-        this.checkShowPreview.addItemListener(e -> this.eventListener.onMainDialogEvent(new PreviewImageEvent(this.checkShowPreview.isSelected())));
-        this.btnDeleteRoi.addActionListener(e -> {
-            final int[] indices = this.jListRois.getSelectedIndices();
-            this.eventListener.onMainDialogEvent(new DeleteRoisEvent(indices));
-        });
-        this.btnPrevImage.addActionListener(e -> {
-            titleHasToChange = true;
-            this.eventListener.onMainDialogEvent(new ChangeImageEvent(ChangeImageEvent.ChangeDirection.PREV));
-        });
-        this.btnNextImage.addActionListener(e -> {
-            titleHasToChange = true;
-            this.eventListener.onMainDialogEvent(new ChangeImageEvent(ChangeImageEvent.ChangeDirection.NEXT));
-        });
-        this.btnAlignImages.addActionListener(e -> this.eventListener.onMainDialogEvent(new AlignEvent(this.checkKeepOriginal.isSelected())));
-        this.btnAutoAlignImages.addActionListener(e -> this.eventListener.onMainDialogEvent(new AutoAlignEvent(this.checkKeepOriginal.isSelected())));
+        Stream.<Component>of(all, leftPanel).forEach(component -> Arrays.stream(getKeyListeners()).forEach(component::addKeyListener));
         // Markers addition handlers
         KeyboardFocusManager manager = KeyboardFocusManager.getCurrentKeyboardFocusManager();
         manager.addKeyEventDispatcher(new KeyboardEventDispatcher());
         this.listenerROI();
+        this.handleCanvasMouseListeners(canvas);
+        MainDialog.currentImage = image;
+        this.addEventListenerToImage();
+        WindowManager.getCurrentWindow().getCanvas().fitToWindow();
+        this.pack();
+        this.setVisible(true);
+    }
+
+    private void handleCanvasMouseListeners(CustomCanvas canvas) {
         canvas.addMouseMotionListener(new MouseMotionAdapter() {
             @Override
             public void mouseDragged(MouseEvent e) {
@@ -241,9 +191,98 @@ public class MainDialog extends ImageWindow {
                 super.mouseReleased(e);
             }
         });
-        // Rois list handling
+    }
+
+    private JPanel getAlignPanel() {
+        final JPanel alignJPanel = new JPanel();
+        final GridBagLayout alignLayout = new GridBagLayout();
+        final GridBagConstraints alignConstraints = new GridBagConstraints();
+        alignJPanel.setLayout(alignLayout);
+
+        alignJPanel.setBorder(BorderFactory.createTitledBorder("Alignment"));
+
+        btnAlignImages.setToolTipText("Align the images based on the added corner points");
+        btnAlignImages.setEnabled(false);
+        btnAutoAlignImages.setToolTipText("Align the images automatically without thinking what it is needed to be done");
+        btnAutoAlignImages.setEnabled(true);
+        checkKeepOriginal.setToolTipText("Keep the original images boundaries, applying stitching where necessary. NOTE: this operation is resource-intensive.");
+        checkKeepOriginal.setSelected(true);
+        checkKeepOriginal.setEnabled(false);
+
+        btnAlignImages.addActionListener(e -> this.eventListener.onMainDialogEvent(new AlignEvent(checkKeepOriginal.isSelected())));
+        btnAutoAlignImages.addActionListener(e -> this.eventListener.onMainDialogEvent(new AutoAlignEvent(checkKeepOriginal.isSelected())));
+
+        alignConstraints.gridx = 0;
+        alignConstraints.gridy = 0;
+        alignConstraints.fill = GridBagConstraints.HORIZONTAL;
+        alignConstraints.gridwidth = 1;
+        alignConstraints.gridheight = 1;
+        alignJPanel.add(checkKeepOriginal, alignConstraints);
+        alignConstraints.gridx = 0;
+        alignConstraints.gridy = 1;
+        alignConstraints.fill = GridBagConstraints.HORIZONTAL;
+        alignConstraints.gridwidth = 1;
+        alignConstraints.gridheight = 1;
+        alignJPanel.add(btnAlignImages, alignConstraints);
+        alignConstraints.gridx = 0;
+        alignConstraints.gridy = 2;
+        alignConstraints.fill = GridBagConstraints.HORIZONTAL;
+        alignConstraints.gridwidth = 1;
+        alignConstraints.gridheight = 1;
+        alignJPanel.add(btnAutoAlignImages, alignConstraints);
+
+        return alignJPanel;
+    }
+
+    private JPanel getActionsPanel() {
+        final JPanel actionsJPanel = new JPanel();
+        final GridBagLayout actionsLayout = new GridBagLayout();
+        final GridBagConstraints actionsConstraints = new GridBagConstraints();
+
+        actionsJPanel.setLayout(actionsLayout);
+        actionsJPanel.setBorder(BorderFactory.createTitledBorder("Actions"));
+
+        checkShowPreview.setToolTipText("Show a preview window");
+        btnDeleteRoi.setToolTipText("Delete selected current corner point");
+        btnDeleteRoi.setEnabled(false);
+        btnPrevImage.setToolTipText("Select previous image in the stack");
+        btnNextImage.setToolTipText("Select next image in the stack");
+
+        final JLabel changeImageLabel = new JLabel("Press \"A\" or \"D\" to change image", LEFT);
+        changeImageLabel.setForeground(Color.gray);
+
+        actionsConstraints.gridx = 0;
+        actionsConstraints.gridy = 0;
+        actionsConstraints.fill = GridBagConstraints.HORIZONTAL;
+        actionsConstraints.gridwidth = 1;
+        actionsConstraints.gridheight = 1;
+        actionsJPanel.add(changeImageLabel, actionsConstraints);
+        actionsConstraints.gridx = 0;
+        actionsConstraints.gridy = 1;
+        actionsConstraints.fill = GridBagConstraints.HORIZONTAL;
+        actionsConstraints.gridwidth = 1;
+        actionsConstraints.gridheight = 1;
+        actionsJPanel.add(checkShowPreview, actionsConstraints);
+        actionsConstraints.gridx = 0;
+        actionsConstraints.gridy = 2;
+        actionsConstraints.fill = GridBagConstraints.HORIZONTAL;
+        actionsConstraints.gridwidth = 1;
+        actionsConstraints.gridheight = 1;
+        actionsJPanel.add(btnDeleteRoi, actionsConstraints);
+        actionsConstraints.gridx = 0;
+        actionsConstraints.gridy = 3;
+        actionsConstraints.fill = GridBagConstraints.HORIZONTAL;
+        actionsConstraints.gridwidth = 1;
+        actionsConstraints.gridheight = 1;
+        actionsJPanel.add(btnPrevImage, actionsConstraints);
+        actionsConstraints.gridx = 0;
+        actionsConstraints.gridy = 4;
+        actionsConstraints.fill = GridBagConstraints.HORIZONTAL;
+        actionsConstraints.gridwidth = 1;
+        actionsConstraints.gridheight = 1;
+        actionsJPanel.add(btnNextImage, actionsConstraints);
+
         this.jListRois.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
-        this.jListRoisModel = new DefaultListModel<>();
         this.jListRois.setModel(this.jListRoisModel);
         this.jListRois.addListSelectionListener(e -> {
             final int[] indices = this.jListRois.getSelectedIndices();
@@ -253,16 +292,71 @@ public class MainDialog extends ImageWindow {
             if (indices.length == 1) {
                 this.eventListener.onMainDialogEvent(new SelectedRoiEvent(indices[0]));
             }
-            this.btnDeleteRoi.setEnabled(indices.length != 0);
+            btnDeleteRoi.setEnabled(indices.length != 0);
         });
-        MainDialog.currentImage = image;
-        this.addEventListenerToImage();
-        new Zoom().run("scale");
-        this.pack();
-        this.setVisible(true);
+
+        checkShowPreview.addItemListener(e -> this.eventListener.onMainDialogEvent(new PreviewImageEvent(checkShowPreview.isSelected())));
+        btnDeleteRoi.addActionListener(e -> {
+            final int[] indices = this.jListRois.getSelectedIndices();
+            this.eventListener.onMainDialogEvent(new DeleteRoisEvent(indices));
+        });
+        btnPrevImage.addActionListener(e -> {
+            titleHasToChange = true;
+            this.eventListener.onMainDialogEvent(new ChangeImageEvent(ChangeImageEvent.ChangeDirection.PREV));
+        });
+        btnNextImage.addActionListener(e -> {
+            titleHasToChange = true;
+            this.eventListener.onMainDialogEvent(new ChangeImageEvent(ChangeImageEvent.ChangeDirection.NEXT));
+        });
+
+        return actionsJPanel;
     }
 
-    private JMenuBar getMenu() {
+    private JPanel getCornersPanel() {
+        final JPanel cornersJPanel = new JPanel();
+        final GridBagLayout cornersLayout = new GridBagLayout();
+        final GridBagConstraints cornersConstraints = new GridBagConstraints();
+        cornersJPanel.setLayout(cornersLayout);
+        cornersJPanel.setBorder(BorderFactory.createTitledBorder("Corners"));
+        JLabel cornerLabel = new JLabel("Press \"C\" to add a corner point");
+        cornerLabel.setForeground(Color.gray);
+
+        this.jListRois = new JList<>();
+        JScrollPane scrollPane = new JScrollPane(this.jListRois);
+        scrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+        scrollPane.setPreferredSize(new Dimension(180, 180));
+        scrollPane.setMinimumSize(new Dimension(180, 180));
+        scrollPane.setMaximumSize(new Dimension(180, 180));
+        this.jListRois.setBackground(Color.white);
+        this.jListRois.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+
+        btnCopyCorners.setEnabled(false);
+        btnCopyCorners.setToolTipText("Select from which image you'll copy-paste the corners");
+        btnCopyCorners.addActionListener(e -> this.eventListener.onMainDialogEvent(new CopyCornersEvent()));
+
+        cornersConstraints.gridx = 0;
+        cornersConstraints.gridy = 0;
+        cornersConstraints.fill = GridBagConstraints.BOTH;
+        cornersConstraints.gridwidth = 1;
+        cornersConstraints.gridheight = 1;
+        cornersJPanel.add(cornerLabel, cornersConstraints);
+        cornersConstraints.gridx = 0;
+        cornersConstraints.gridy = 1;
+        cornersConstraints.fill = GridBagConstraints.BOTH;
+        cornersConstraints.gridwidth = 1;
+        cornersConstraints.gridheight = 1;
+        cornersJPanel.add(scrollPane, cornersConstraints);
+        cornersConstraints.gridx = 0;
+        cornersConstraints.gridy = 2;
+        cornersConstraints.fill = GridBagConstraints.BOTH;
+        cornersConstraints.gridwidth = 1;
+        cornersConstraints.gridheight = 1;
+        cornersJPanel.add(btnCopyCorners, cornersConstraints);
+
+        return cornersJPanel;
+    }
+
+    private JPanel getMenuPanel() {
         final JMenu fileMenu = new JMenu("File");
         final JMenuItem loadProjectItem = new JMenuItem("Load Project");
         loadProjectItem.addActionListener(e -> this.eventListener.onMainDialogEvent(new LoadProjectEvent()));
@@ -285,7 +379,9 @@ public class MainDialog extends ImageWindow {
         JMenuBar menuBar = new JMenuBar();
         menuBar.add(fileMenu);
         menuBar.add(aboutMenu);
-        return menuBar;
+        final JPanel menuPanel = new JPanel();
+        menuPanel.add(menuBar);
+        return menuPanel;
     }
 
     private void handleOutOfBoundsRois() {
@@ -354,13 +450,22 @@ public class MainDialog extends ImageWindow {
             final Rectangle2D.Double bounds = roi.getFloatBounds();
             roi.setLocation(bounds.x + translationX, bounds.y + translationY);
             final Rectangle2D.Double finalBounds = roi.getFloatBounds();
-            jListRoisModel.set(index, MessageFormat.format("{0} - {1},{2}", index + 1, finalBounds.x, finalBounds.y));
+            this.jListRoisModel.set(index, MessageFormat.format("{0} - {1},{2}", index + 1, finalBounds.x, finalBounds.y));
         }
     }
 
 
+    public void fixMaximize() {
+        // Multi monitor solution to get screen resolution
+        GraphicsDevice gd = GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice();
+        int width = gd.getDisplayMode().getWidth();
+        int height = gd.getDisplayMode().getHeight();
+        this.setMaximumSize(new Dimension(width, height));
+        this.setMaximizedBounds(new Rectangle(getMaximumBounds().x, getMaximumBounds().y, width, height));
+    }
+
     /**
-     * Change the actual image displayed in the main view, based on the given BufferedImage istance
+     * Change the actual image displayed in the main view, based on the given BufferedImage instance
      *
      * @param image
      */
@@ -373,12 +478,10 @@ public class MainDialog extends ImageWindow {
             this.image = image;
             this.btnDeleteRoi.setEnabled(jListRois.getSelectedIndices().length != 0);
             this.image.restoreRois();
+            WindowManager.getCurrentWindow().getCanvas().fitToWindow();
             this.drawRois(image.getManager());
             this.addEventListenerToImage();
-            // Let's call the zoom plugin to scale the image to fit in the user window
-            // The zoom scaling command works on the current active window: to be 100% sure it will work, we need to forcefully select the preview window.
             IJ.selectWindow(this.getImagePlus().getID());
-            new Zoom().run("scale");
             this.pack();
         }
     }
@@ -471,6 +574,12 @@ public class MainDialog extends ImageWindow {
     public synchronized void mouseWheelMoved(MouseWheelEvent e) {
         titleHasToChange = false;
         super.mouseWheelMoved(e);
+    }
+
+    @Override
+    public void windowStateChanged(WindowEvent e) {
+        titleHasToChange = false;
+        super.windowStateChanged(e);
     }
 
     @Override

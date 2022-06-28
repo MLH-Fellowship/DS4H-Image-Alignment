@@ -73,7 +73,7 @@ public class MainDialog extends ImageWindow {
         allConstraints.fill = GridBagConstraints.BOTH;
         all.setLayout(layout);
 
-        final Panel menu = new Panel();
+        final Panel menu = new Panel(new FlowLayout(FlowLayout.LEFT));
         menu.add(getMenuPanel());
         menu.setBackground(new Color(238, 238, 238));
         allConstraints.gridx = 0;
@@ -81,7 +81,7 @@ public class MainDialog extends ImageWindow {
         allConstraints.gridwidth = 1;
         allConstraints.gridheight = 1;
         allConstraints.weightx = 1;
-        allConstraints.weighty = 1;
+        allConstraints.weighty = 0.08;
         all.add(menu, allConstraints);
 
         final JPanel leftPanel = new JPanel();
@@ -122,15 +122,19 @@ public class MainDialog extends ImageWindow {
 
         allConstraints.gridx = 0;
         allConstraints.gridy = 1;
+        allConstraints.gridheight = 1;
         allConstraints.gridwidth = 1;
-        allConstraints.gridheight = 3;
+        allConstraints.weighty = 0.92;
+        allConstraints.weightx = 0.30;
         allConstraints.fill = GridBagConstraints.BOTH;
         all.add(leftPanel, allConstraints);
 
         allConstraints.gridx = 1;
         allConstraints.gridy = 1;
-        allConstraints.gridwidth = 3;
-        allConstraints.gridheight = 3;
+        allConstraints.gridheight = 1;
+        allConstraints.gridwidth = 2;
+        allConstraints.weighty = 0.92;
+        allConstraints.weightx = 0.70;
         allConstraints.fill = GridBagConstraints.BOTH;
         all.add(canvas, allConstraints);
 

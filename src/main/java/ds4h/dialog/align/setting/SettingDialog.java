@@ -16,92 +16,92 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 
 public class SettingDialog extends JDialog {
-  private static final String MESSAGE = "The Affine model is used by default.\n Check one of these checkboxes to change it";
-  private final SettingEvent settingEvent;
-  private final JTextPane textPane;
-  private final JCheckBox checkIsRigid;
-  private final JCheckBox checkIsProjective;
-  private final JButton okButton;
-  
-  
-  public SettingDialog(JFrame frame, String title, boolean isModal) {
-    super(frame, title, isModal);
-    this.settingEvent = new SettingEvent();
-    this.checkIsRigid = new JCheckBox("Check for Rigid Transformation");
-    this.checkIsProjective = new JCheckBox("Check for Projective Transformation");
-    this.textPane = new JTextPane();
-    this.okButton = new JButton("OK");
-    this.initCheckboxes();
-  }
+    private static final String MESSAGE = "The Affine model is used by default.\n Check one of these checkboxes to change it";
+    private final SettingEvent settingEvent;
+    private final JTextPane textPane;
+    private final JCheckBox checkIsRigid;
+    private final JCheckBox checkIsProjective;
+    private final JButton okButton;
 
-  public boolean initIsSuccessFul() {
-    final boolean[] isSuccessFul = {true};
-    // add text
-    this.getTextPane().setText(MESSAGE);
-    this.getTextPane().setDisabledTextColor(Color.BLACK);
-    this.getTextPane().setEnabled(false);
-    this.add(this.getTextPane(), BorderLayout.NORTH);
-    // add checkboxes
-    JPanel checkPanel = new JPanel(new GridLayout(0, 1));
-    checkPanel.add(this.getCheckIsProjective());
-    checkPanel.add(this.getCheckIsRigid());
-    this.add(checkPanel, BorderLayout.CENTER);
-    // add button
-    this.add(this.getOkButton(), BorderLayout.SOUTH);
-    this.setLocationRelativeTo(null); // centers the frame
-    this.setDefaultCloseOperation(DISPOSE_ON_CLOSE);
-    this.addWindowListener(new WindowAdapter() {
-      @Override
-      public void windowClosing(WindowEvent e) {
-        super.windowClosing(e);
-        isSuccessFul[0] = false;
-      }
-    });
 
-    this.pack();
-    this.setVisible(true);
+    public SettingDialog(JFrame frame, String title, boolean isModal) {
+        super(frame, title, isModal);
+        this.settingEvent = new SettingEvent();
+        this.checkIsRigid = new JCheckBox("Check for Rigid Transformation");
+        this.checkIsProjective = new JCheckBox("Check for Projective Transformation");
+        this.textPane = new JTextPane();
+        this.okButton = new JButton("OK");
+        this.initCheckboxes();
+    }
 
-    return isSuccessFul[0];
-  }
-  
-  public SettingEvent getEvent() {
-    return this.settingEvent;
-  }
-  
-  public JButton getOkButton() {
-    return this.okButton;
-  }
-  
-  private void initCheckboxes() {
-    this.getCheckIsRigid().setToolTipText("Evaluate only translation on X,Y axis");
-    this.getCheckIsRigid().setSelected(false);
-    this.getCheckIsRigid().setEnabled(true);
-    this.getCheckIsRigid().addItemListener(e -> {
-      if (e.getStateChange() == ItemEvent.SELECTED) {
-        this.getEvent().setRigid(true);
-        this.getCheckIsProjective().setSelected(false);
-      }
-    });
-    this.getCheckIsProjective().setToolTipText("Project model needs four points");
-    this.getCheckIsProjective().setSelected(false);
-    this.getCheckIsProjective().setEnabled(true);
-    this.getCheckIsProjective().addItemListener(e -> {
-      if (e.getStateChange() == ItemEvent.SELECTED) {
-        this.getEvent().setProjective(true);
+    public boolean initIsSuccessFul() {
+        final boolean[] isSuccessFul = {true};
+        // add text
+        this.getTextPane().setText(MESSAGE);
+        this.getTextPane().setDisabledTextColor(Color.BLACK);
+        this.getTextPane().setEnabled(false);
+        this.add(this.getTextPane(), BorderLayout.NORTH);
+        // add checkboxes
+        JPanel checkPanel = new JPanel(new GridLayout(0, 1));
+        checkPanel.add(this.getCheckIsProjective());
+        checkPanel.add(this.getCheckIsRigid());
+        this.add(checkPanel, BorderLayout.CENTER);
+        // add button
+        this.add(this.getOkButton(), BorderLayout.SOUTH);
+        this.setLocationRelativeTo(null); // centers the frame
+        this.setDefaultCloseOperation(DISPOSE_ON_CLOSE);
+        this.addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+                super.windowClosing(e);
+                isSuccessFul[0] = false;
+            }
+        });
+
+        this.pack();
+        this.setVisible(true);
+
+        return isSuccessFul[0];
+    }
+
+    public SettingEvent getEvent() {
+        return this.settingEvent;
+    }
+
+    public JButton getOkButton() {
+        return this.okButton;
+    }
+
+    private void initCheckboxes() {
+        this.getCheckIsRigid().setToolTipText("Evaluate only translation on X,Y axis");
         this.getCheckIsRigid().setSelected(false);
-      }
-    });
-  }
-  
-  private JCheckBox getCheckIsRigid() {
-    return this.checkIsRigid;
-  }
-  
-  private JCheckBox getCheckIsProjective() {
-    return this.checkIsProjective;
-  }
-  
-  private JTextPane getTextPane() {
-    return this.textPane;
-  }
+        this.getCheckIsRigid().setEnabled(true);
+        this.getCheckIsRigid().addItemListener(e -> {
+            if (e.getStateChange() == ItemEvent.SELECTED) {
+                this.getEvent().setRigid(true);
+                this.getCheckIsProjective().setSelected(false);
+            }
+        });
+        this.getCheckIsProjective().setToolTipText("Project model needs four points");
+        this.getCheckIsProjective().setSelected(false);
+        this.getCheckIsProjective().setEnabled(true);
+        this.getCheckIsProjective().addItemListener(e -> {
+            if (e.getStateChange() == ItemEvent.SELECTED) {
+                this.getEvent().setProjective(true);
+                this.getCheckIsRigid().setSelected(false);
+            }
+        });
+    }
+
+    private JCheckBox getCheckIsRigid() {
+        return this.checkIsRigid;
+    }
+
+    private JCheckBox getCheckIsProjective() {
+        return this.checkIsProjective;
+    }
+
+    private JTextPane getTextPane() {
+        return this.textPane;
+    }
 }

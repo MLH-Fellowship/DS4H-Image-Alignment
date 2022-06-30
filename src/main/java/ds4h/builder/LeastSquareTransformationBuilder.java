@@ -3,7 +3,6 @@ package ds4h.builder;
 import ds4h.dialog.align.OnAlignDialogEventListener;
 import ds4h.dialog.align.setting.SettingDialog;
 import ds4h.dialog.loading.LoadingDialog;
-import ds4h.dialog.main.event.MainDialogEvent;
 import ds4h.dialog.main.event.RegistrationEvent;
 import ds4h.image.buffered.BufferedImage;
 import ds4h.image.manager.ImagesManager;
@@ -26,6 +25,8 @@ import java.util.List;
 import java.util.Optional;
 
 public class LeastSquareTransformationBuilder extends AbstractBuilder<BufferedImage> {
+    private static final int PROJECTIVE_MINIMUM_NUMBER = 4;
+    private static final String PROJECTIVE_WARNING = "Please if you choose to use projective you need 4 Corner Points per image";
     private List<RoiManager> managers;
     private SettingDialog settingDialog;
     private BufferedImage sourceImage;
@@ -82,11 +83,21 @@ public class LeastSquareTransformationBuilder extends AbstractBuilder<BufferedIm
                 if (!settingDialog.initIsSuccessFul()) {
                     isSuccessful[0] = false;
                 }
+
+                if (settingDialog.getEvent().isProjective() && !this.areCornerPointsAtLeast(PROJECTIVE_MINIMUM_NUMBER)) {
+                    isSuccessful[0] = false;
+                    getLoadingDialog().hideDialog();
+                    JOptionPane.showMessageDialog(null, PROJECTIVE_WARNING, "Warning", JOptionPane.WARNING_MESSAGE);
+                }
             });
         } catch (InterruptedException | InvocationTargetException e) {
             IJ.showMessage("Something is not right, sorry, contact the Developer");
         }
         return isSuccessful[0];
+    }
+
+    private boolean areCornerPointsAtLeast(int minimum) {
+        return this.managers.stream().map(RoiManager::getRoisAsArray).mapToInt(roi -> roi.length).allMatch(length -> length == minimum);
     }
 
     @Override

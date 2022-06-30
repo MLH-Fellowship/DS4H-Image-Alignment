@@ -206,11 +206,10 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
         }
         project.setProjectRois(projectRois);
         project.setFilePaths(this.getManager().getOriginalImageFiles().stream().map(ImageFile::getPathFile).collect(Collectors.toList()));
-        final String outputPath = FileService.chooseDirectory();
+        final String outputPath = FileService.chooseDirectoryViaIJ();
         if (outputPath.isEmpty()) {
             return;
         }
-        System.out.println("pr" + project.getFilePaths().toString());
         ProjectService.save(project, getImage().getFilePath().substring(0, getImage().getFilePath().lastIndexOf(File.separator)), outputPath);
         JOptionPane.showMessageDialog(null, "The project was saved here: " + outputPath, SAVE_PROJECT_TITLE_SUCCESS, JOptionPane.WARNING_MESSAGE);
     }
@@ -356,7 +355,7 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
         }
     }
 
-  /*  private double getImageRatio(BufferedImage image) {
+   /*private double getImageRatio(BufferedImage image) {
         return (double) image.getWidth() / (double) image.getHeight();
     }
 

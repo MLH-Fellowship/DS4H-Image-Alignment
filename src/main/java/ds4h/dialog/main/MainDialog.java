@@ -65,7 +65,6 @@ public class MainDialog extends ImageWindow {
         // Remove the canvas from the window, to add it later
         this.removeAll();
 
-        this.fixMaximize();
         final Panel all = new Panel();
         all.setBackground(new Color(238, 238, 238));
         final GridBagLayout layout = new GridBagLayout();
@@ -78,7 +77,7 @@ public class MainDialog extends ImageWindow {
         menu.setBackground(new Color(238, 238, 238));
         allConstraints.gridx = 0;
         allConstraints.gridy = 0;
-        allConstraints.gridwidth = 1;
+        allConstraints.gridwidth = 4;
         allConstraints.gridheight = 1;
         allConstraints.weightx = 1;
         allConstraints.weighty = 0.08;
@@ -125,16 +124,16 @@ public class MainDialog extends ImageWindow {
         allConstraints.gridheight = 1;
         allConstraints.gridwidth = 1;
         allConstraints.weighty = 0.92;
-        allConstraints.weightx = 0.30;
+        allConstraints.weightx = 0.04;
         allConstraints.fill = GridBagConstraints.BOTH;
         all.add(leftPanel, allConstraints);
 
         allConstraints.gridx = 1;
         allConstraints.gridy = 1;
         allConstraints.gridheight = 1;
-        allConstraints.gridwidth = 2;
+        allConstraints.gridwidth = 3;
         allConstraints.weighty = 0.92;
-        allConstraints.weightx = 0.70;
+        allConstraints.weightx = 0.96;
         allConstraints.fill = GridBagConstraints.BOTH;
         all.add(canvas, allConstraints);
 
@@ -218,19 +217,19 @@ public class MainDialog extends ImageWindow {
 
         alignConstraints.gridx = 0;
         alignConstraints.gridy = 0;
-        alignConstraints.fill = GridBagConstraints.HORIZONTAL;
+        alignConstraints.fill = GridBagConstraints.BOTH;
         alignConstraints.gridwidth = 1;
         alignConstraints.gridheight = 1;
         alignJPanel.add(checkKeepOriginal, alignConstraints);
         alignConstraints.gridx = 0;
         alignConstraints.gridy = 1;
-        alignConstraints.fill = GridBagConstraints.HORIZONTAL;
+        alignConstraints.fill = GridBagConstraints.BOTH;
         alignConstraints.gridwidth = 1;
         alignConstraints.gridheight = 1;
         alignJPanel.add(btnAlignImages, alignConstraints);
         alignConstraints.gridx = 0;
         alignConstraints.gridy = 2;
-        alignConstraints.fill = GridBagConstraints.HORIZONTAL;
+        alignConstraints.fill = GridBagConstraints.BOTH;
         alignConstraints.gridwidth = 1;
         alignConstraints.gridheight = 1;
         alignJPanel.add(btnAutoAlignImages, alignConstraints);
@@ -257,31 +256,31 @@ public class MainDialog extends ImageWindow {
 
         actionsConstraints.gridx = 0;
         actionsConstraints.gridy = 0;
-        actionsConstraints.fill = GridBagConstraints.HORIZONTAL;
+        actionsConstraints.fill = GridBagConstraints.BOTH;
         actionsConstraints.gridwidth = 1;
         actionsConstraints.gridheight = 1;
         actionsJPanel.add(changeImageLabel, actionsConstraints);
         actionsConstraints.gridx = 0;
         actionsConstraints.gridy = 1;
-        actionsConstraints.fill = GridBagConstraints.HORIZONTAL;
+        actionsConstraints.fill = GridBagConstraints.BOTH;
         actionsConstraints.gridwidth = 1;
         actionsConstraints.gridheight = 1;
         actionsJPanel.add(checkShowPreview, actionsConstraints);
         actionsConstraints.gridx = 0;
         actionsConstraints.gridy = 2;
-        actionsConstraints.fill = GridBagConstraints.HORIZONTAL;
+        actionsConstraints.fill = GridBagConstraints.BOTH;
         actionsConstraints.gridwidth = 1;
         actionsConstraints.gridheight = 1;
         actionsJPanel.add(btnDeleteRoi, actionsConstraints);
         actionsConstraints.gridx = 0;
         actionsConstraints.gridy = 3;
-        actionsConstraints.fill = GridBagConstraints.HORIZONTAL;
+        actionsConstraints.fill = GridBagConstraints.BOTH;
         actionsConstraints.gridwidth = 1;
         actionsConstraints.gridheight = 1;
         actionsJPanel.add(btnPrevImage, actionsConstraints);
         actionsConstraints.gridx = 0;
         actionsConstraints.gridy = 4;
-        actionsConstraints.fill = GridBagConstraints.HORIZONTAL;
+        actionsConstraints.fill = GridBagConstraints.BOTH;
         actionsConstraints.gridwidth = 1;
         actionsConstraints.gridheight = 1;
         actionsJPanel.add(btnNextImage, actionsConstraints);
@@ -456,16 +455,6 @@ public class MainDialog extends ImageWindow {
             final Rectangle2D.Double finalBounds = roi.getFloatBounds();
             this.jListRoisModel.set(index, MessageFormat.format("{0} - {1},{2}", index + 1, finalBounds.x, finalBounds.y));
         }
-    }
-
-
-    public void fixMaximize() {
-        // Multi monitor solution to get screen resolution
-        GraphicsDevice gd = GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice();
-        int width = gd.getDisplayMode().getWidth();
-        int height = gd.getDisplayMode().getHeight();
-        this.setMaximumSize(new Dimension(width, height));
-        this.setMaximizedBounds(new Rectangle(getMaximumBounds().x, getMaximumBounds().y, width, height));
     }
 
     /**

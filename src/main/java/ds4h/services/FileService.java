@@ -10,6 +10,7 @@
 package ds4h.services;
 
 import ij.IJ;
+import ij.io.DirectoryChooser;
 
 import javax.imageio.ImageIO;
 import javax.swing.*;
@@ -27,6 +28,7 @@ import java.util.zip.ZipInputStream;
 
 public class FileService {
     private static final String FILE_PROTOCOL = "file:" + File.separator + File.separator + File.separator;
+    private static final String CHOOSE_A_DIRECTORY = "Choose a Directory";
 
     private FileService() {
     }
@@ -177,16 +179,9 @@ public class FileService {
         }
     }
 
-    public static String chooseDirectory() {
-        final JFileChooser chooser = new JFileChooser();
-        chooser.setCurrentDirectory(new java.io.File(System.getProperty("user.home")));
-        chooser.setDialogTitle("Choose a Directory");
-        chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
-        chooser.setAcceptAllFileFilterUsed(false);
-        if (chooser.showOpenDialog(new Frame()) == JFileChooser.APPROVE_OPTION) {
-            return chooser.getSelectedFile().getAbsolutePath();
-        }
-        return "";
+    public static String chooseDirectoryViaIJ() {
+        final DirectoryChooser directoryChooser = new DirectoryChooser(CHOOSE_A_DIRECTORY);
+        return directoryChooser.getDirectory();
     }
 
     public static File newFile(File destinationDir, ZipEntry zipEntry) throws IOException {

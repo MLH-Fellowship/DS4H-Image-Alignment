@@ -16,10 +16,10 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 
 public class SettingDialog extends JDialog {
-    private static final String MESSAGE = "The Affine model is used by default.\n Check one of these checkboxes to change it";
+    private static final String MESSAGE = "The Rigid Transformation is used by default.\n Check one of these checkboxes to change it";
     private final SettingEvent settingEvent;
     private final JTextPane textPane;
-    private final JCheckBox checkIsRigid;
+    private final JCheckBox checkIsAffine;
     private final JCheckBox checkIsProjective;
     private final JButton okButton;
 
@@ -27,7 +27,7 @@ public class SettingDialog extends JDialog {
     public SettingDialog(JFrame frame, String title, boolean isModal) {
         super(frame, title, isModal);
         this.settingEvent = new SettingEvent();
-        this.checkIsRigid = new JCheckBox("Check for Rigid Transformation");
+        this.checkIsAffine = new JCheckBox("Check for Affine Transformation");
         this.checkIsProjective = new JCheckBox("Check for Projective Transformation");
         this.textPane = new JTextPane();
         this.okButton = new JButton("OK");
@@ -44,7 +44,7 @@ public class SettingDialog extends JDialog {
         // add checkboxes
         JPanel checkPanel = new JPanel(new GridLayout(0, 1));
         checkPanel.add(this.getCheckIsProjective());
-        checkPanel.add(this.getCheckIsRigid());
+        checkPanel.add(this.getCheckIsAffine());
         this.add(checkPanel, BorderLayout.CENTER);
         // add button
         this.add(this.getOkButton(), BorderLayout.SOUTH);
@@ -73,12 +73,12 @@ public class SettingDialog extends JDialog {
     }
 
     private void initCheckboxes() {
-        this.getCheckIsRigid().setToolTipText("Evaluate only translation on X,Y axis");
-        this.getCheckIsRigid().setSelected(false);
-        this.getCheckIsRigid().setEnabled(true);
-        this.getCheckIsRigid().addItemListener(e -> {
+        this.getCheckIsAffine().setToolTipText("Evaluate only translation on X,Y axis");
+        this.getCheckIsAffine().setSelected(false);
+        this.getCheckIsAffine().setEnabled(true);
+        this.getCheckIsAffine().addItemListener(e -> {
             if (e.getStateChange() == ItemEvent.SELECTED) {
-                this.getEvent().setRigid(true);
+                this.getEvent().setAffine(true);
                 this.getCheckIsProjective().setSelected(false);
             }
         });
@@ -88,13 +88,13 @@ public class SettingDialog extends JDialog {
         this.getCheckIsProjective().addItemListener(e -> {
             if (e.getStateChange() == ItemEvent.SELECTED) {
                 this.getEvent().setProjective(true);
-                this.getCheckIsRigid().setSelected(false);
+                this.getCheckIsAffine().setSelected(false);
             }
         });
     }
 
-    private JCheckBox getCheckIsRigid() {
-        return this.checkIsRigid;
+    private JCheckBox getCheckIsAffine() {
+        return this.checkIsAffine;
     }
 
     private JCheckBox getCheckIsProjective() {

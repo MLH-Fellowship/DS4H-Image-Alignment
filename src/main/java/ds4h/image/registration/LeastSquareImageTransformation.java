@@ -70,9 +70,9 @@ public class LeastSquareImageTransformation {
     }
 
     private static Class<? extends Model<?>> getTransformationModel(SettingEvent event) {
-        Class<? extends Model<?>> model = AffineModel2D.class;
-        if (event.isRigid()) {
-            model = TranslationModel2D.class;
+        Class<? extends Model<?>> model = TranslationModel2D.class;
+        if (event.isAffine()) {
+            model = AffineModel2D.class;
         }
         if (event.isProjective()) {
             // THIS ONE NEEDS FOUR ROIS

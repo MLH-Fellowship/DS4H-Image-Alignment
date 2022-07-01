@@ -13,7 +13,7 @@ import ds4h.dialog.main.event.MainDialogEvent;
 
 public class SettingEvent implements MainDialogEvent {
   private boolean isProjective;
-  private boolean isRigid;
+  private boolean isAffine;
   
   public SettingEvent() {}
   
@@ -21,15 +21,15 @@ public class SettingEvent implements MainDialogEvent {
     return this.isProjective;
   }
   
-  public boolean isRigid() {
-    return this.isRigid;
+  public boolean isAffine() {
+    return this.isAffine;
   }
   
   public void setProjective(boolean projective) {
     this.isProjective = projective;
   }
   
-  public void setRigid(boolean rigid) {
-    this.isRigid = rigid;
+  public void setAffine(boolean affine) {
+    this.isAffine = affine;
   }
 }

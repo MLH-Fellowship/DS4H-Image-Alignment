@@ -108,6 +108,10 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
         if (this.image != null) {
             WindowManager.setCurrentWindow(this.image.getWindow());
         }
+        /**
+         * TODO: A solution to this big switch case could be simply Polymorphism!
+         * TODO: It's an easy fix it but as always I'm really sorry but I don't have time to do that
+         */
         switch (dialogEvent.getClass().getSimpleName()) {
             case "PreviewImageEvent":
                 this.previewImage((PreviewImageEvent) dialogEvent);

@@ -57,10 +57,8 @@ public class SettingDialog extends JDialog {
                 isSuccessFul[0] = false;
             }
         });
-
         this.pack();
         this.setVisible(true);
-
         return isSuccessFul[0];
     }
 

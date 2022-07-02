@@ -31,6 +31,10 @@ public class ProjectService {
         XMLService.create(ROIS_AND_INDEXES, "image", project, xmlPath);
         List<String> files = new ArrayList<>(project.getFilePaths());
         files.add(xmlPath);
-        ZipService.zipIt(outputPath, files);
+        try {
+            ZipService.zipIt(outputPath, files);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 }

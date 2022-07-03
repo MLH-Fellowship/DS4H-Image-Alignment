@@ -33,6 +33,7 @@ import static javax.xml.parsers.DocumentBuilderFactory.newInstance;
 
 public class XMLService {
     private static final String FILEPATH = "filePath";
+
     private XMLService() {
     }
 
@@ -96,9 +97,6 @@ public class XMLService {
      */
     private static void writeXml(Document doc, OutputStream output) throws TransformerException {
         TransformerFactory transformerFactory = TransformerFactory.newInstance();
-        // to be compliant, prohibit the use of all protocols by external entities:
-        transformerFactory.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "");
-        transformerFactory.setAttribute(XMLConstants.ACCESS_EXTERNAL_STYLESHEET, "");
         Transformer transformer = transformerFactory.newTransformer();
         DOMSource source = new DOMSource(doc);
         StreamResult result = new StreamResult(output);

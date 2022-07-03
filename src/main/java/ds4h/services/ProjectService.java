@@ -4,12 +4,16 @@ package ds4h.services;
 import ds4h.image.model.Project;
 
 import java.io.File;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 
 public class ProjectService {
     private static final String ROIS_AND_INDEXES = "rois_and_indexes";
 
-    private ProjectService() {}
+    private ProjectService() {
+    }
 
     public static Project load() {
         Project project = null;

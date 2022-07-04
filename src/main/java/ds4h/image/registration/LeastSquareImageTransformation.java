@@ -33,26 +33,15 @@ public class LeastSquareImageTransformation {
             IJ.showMessage(e.getMessage());
         }
         t.setAlpha(1.0f);
-        int meshResolution = 32;
+        int meshResolution = 64;
         final ImagePlus target = template.createImagePlus();
         final ImageProcessor ipSource = source.getProcessor();
         final ImageProcessor ipTarget = source.getProcessor().createProcessor(template.getWidth(), template.getHeight());
-        final List<Point> sourcePoints = Arrays.stream(source.getManager().getRoisAsArray()).map(roi -> {
-            double oldX = roi.getXBase();
-            double oldY = roi.getYBase();
-            double newX = oldX * ((double) source.getWidth() / source.getEditorImageDimension().width);
-            double newY = oldY * ((double) source.getHeight() / source.getEditorImageDimension().height);
-            return new Point(new double[]{newX, newY});
-        }).collect(Collectors.toList());
-        final List<Point> templatePoints = Arrays.stream(template.getManager().getRoisAsArray()).map(roi -> {
-            double oldX = roi.getXBase();
-            double oldY = roi.getYBase();
-            double newX = oldX * ((double) template.getWidth() / template.getEditorImageDimension().width);
-            double newY = oldY * ((double) template.getHeight() / template.getEditorImageDimension().height);
-            return new Point(new double[]{newX, newY});
-        }).collect(Collectors.toList());
+        final List<Point> sourcePoints = LeastSquareImageTransformation.getPoints(source);
+        final List<Point> templatePoints = LeastSquareImageTransformation.getPoints(template);
         final int numMatches = Math.min(sourcePoints.size(), templatePoints.size());
         final ArrayList<PointMatch> matches = new ArrayList<>();
+
         for (int i = 0; i < numMatches; ++i)
             matches.add(new PointMatch(sourcePoints.get(i), templatePoints.get(i)));
         try {
@@ -79,5 +68,13 @@ public class LeastSquareImageTransformation {
             model = HomographyModel2D.class;
         }
         return model;
+    }
+
+    private static List<Point> getPoints(BufferedImage image) {
+        return Arrays.stream(image.getManager().getRoisAsArray()).map(roi -> {
+            double oldX = roi.getRotationCenter().xpoints[0];
+            double oldY = roi.getRotationCenter().ypoints[0];
+            return new Point(new double[]{oldX, oldY});
+        }).collect(Collectors.toList());
     }
 }

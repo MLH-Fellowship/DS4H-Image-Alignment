@@ -191,9 +191,9 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
     private void saveProject() {
         final Project project = new Project();
         final List<ProjectRoi> projectRois = new ArrayList<>();
-        List<ImageFile> originalImageFiles = this.getManager().getOriginalImageFiles();
-        for (ImageFile originalImageFile : originalImageFiles) {
-            List<RoiManager> roiManagerList = originalImageFile.getRoiManagers();
+        List<ImageFile> imageFiles = this.getManager().getImageFiles();
+        for (ImageFile imageFile : imageFiles) {
+            List<RoiManager> roiManagerList = imageFile.getRoiManagers();
             for (RoiManager roiManager : roiManagerList) {
                 Roi[] roisAsArray = roiManager.getRoisAsArray();
                 for (int roiIndex = 0; roiIndex < roisAsArray.length; roiIndex++) {
@@ -203,7 +203,7 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
                     final ProjectRoi projectRoi = new ProjectRoi();
                     projectRoi.setPoint(new Pair<>(x, y));
                     projectRoi.setRoiIndex(roiIndex);
-                    projectRoi.setFilePath(originalImageFile.getPathFile());
+                    projectRoi.setFilePath(imageFile.getPathFile());
                     projectRois.add(projectRoi);
                 }
             }

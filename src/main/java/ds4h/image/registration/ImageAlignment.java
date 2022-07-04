@@ -518,6 +518,8 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
     private void deleteRoi(DeleteRoiEvent dialogEvent) {
         this.getImage().getManager().select(dialogEvent.getRoiIndex());
         this.getImage().getManager().runCommand(DELETE_COMMAND);
+        this.getOriginalImage().getManager().select(dialogEvent.getRoiIndex());
+        this.getOriginalImage().getManager().runCommand(DELETE_COMMAND);
         this.refreshRoiGUI();
     }
 
@@ -526,6 +528,8 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
         IntStream.range(0, rois.length).map(i -> rois[rois.length - 1 - i]).forEachOrdered(roi -> {
             this.getImage().getManager().select(roi);
             this.getImage().getManager().runCommand(DELETE_COMMAND);
+            this.getOriginalImage().getManager().select(roi);
+            this.getOriginalImage().getManager().runCommand(DELETE_COMMAND);
             this.refreshRoiGUI();
         });
     }

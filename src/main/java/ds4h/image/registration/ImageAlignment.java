@@ -35,7 +35,8 @@ import ds4h.image.buffered.BufferedImage;
 import ds4h.image.manager.ImagesManager;
 import ds4h.image.model.ImageFile;
 import ds4h.image.model.Project;
-import ds4h.image.model.ProjectRoi;
+import ds4h.image.model.ProjectImage;
+import ds4h.image.model.ProjectImageRoi;
 import ds4h.services.FileService;
 import ds4h.services.ProjectService;
 import ds4h.services.loader.Loader;
@@ -51,6 +52,7 @@ import ij.io.FileSaver;
 import ij.io.SaveDialog;
 import ij.plugin.frame.RoiManager;
 import loci.common.enumeration.EnumException;
+import loci.formats.FormatException;
 import loci.formats.UnknownFormatException;
 import org.opencv.core.Mat;
 
@@ -183,33 +185,44 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
             return;
         }
         // load new one
-        this.initialize(project.getFilePaths());
+        this.initialize(project.getProjectImages().stream().map(ProjectImage::getFilePath).collect(Collectors.toList()));
         // set rois for roiManagers
-        this.applyCorners(project.getProjectRois());
+        this.applyCorners(project);
     }
 
     private void saveProject() {
+        int counterBeforeThisId = 0;
         final Project project = new Project();
-        final List<ProjectRoi> projectRois = new ArrayList<>();
-        List<ImageFile> imageFiles = this.getManager().getImageFiles();
-        for (ImageFile imageFile : imageFiles) {
-            List<RoiManager> roiManagerList = imageFile.getRoiManagers();
-            for (RoiManager roiManager : roiManagerList) {
+        final List<ProjectImage> projectImages = new ArrayList<>();
+        final List<ImageFile> imageFiles = this.getManager().getImageFiles();
+        for (final ImageFile imageFile : imageFiles) {
+            final ProjectImage projectImage = new ProjectImage(imageFile.getNImages(), imageFile.getPathFile());
+            final List<ProjectImageRoi> projectImageRois = new ArrayList<>();
+            for (int imageFileIndex = 0; imageFileIndex < imageFile.getNImages(); imageFileIndex++) {
+                projectImage.setId(counterBeforeThisId);
+                RoiManager roiManager;
+                try {
+                    roiManager = imageFile.getImage(imageFileIndex, true).getManager();
+                } catch (IOException | FormatException e) {
+                    throw new RuntimeException(e);
+                }
                 Roi[] roisAsArray = roiManager.getRoisAsArray();
                 for (int roiIndex = 0; roiIndex < roisAsArray.length; roiIndex++) {
                     Roi roi = roisAsArray[roiIndex];
                     final BigDecimal x = BigDecimal.valueOf(roi.getRotationCenter().xpoints[0]);
                     final BigDecimal y = BigDecimal.valueOf(roi.getRotationCenter().ypoints[0]);
-                    final ProjectRoi projectRoi = new ProjectRoi();
-                    projectRoi.setPoint(new Pair<>(x, y));
-                    projectRoi.setRoiIndex(roiIndex);
-                    projectRoi.setFilePath(imageFile.getPathFile());
-                    projectRois.add(projectRoi);
+                    final ProjectImageRoi projectImageRoi = new ProjectImageRoi();
+                    projectImageRoi.setPoint(new Pair<>(x, y));
+                    projectImageRoi.setId(roiIndex);
+                    projectImageRoi.setImageIndex(imageFileIndex);
+                    projectImageRois.add(projectImageRoi);
                 }
             }
+            counterBeforeThisId += imageFile.getNImages();
+            projectImage.setProjectImageRois(projectImageRois);
+            projectImages.add(projectImage);
         }
-        project.setProjectRois(projectRois);
-        project.setFilePaths(this.getManager().getOriginalImageFiles().stream().map(ImageFile::getPathFile).collect(Collectors.toList()));
+        project.setProjectImages(projectImages);
         final String outputPath = FileService.chooseDirectoryViaIJ();
         if (outputPath.isEmpty()) {
             return;
@@ -233,35 +246,35 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
         }, 20);
     }
 
-    public void applyCorners(List<ProjectRoi> projectRois) {
-        Comparator<ProjectRoi> comparator = Comparator.comparing(ProjectRoi::getRoiIndex);
-        projectRois.stream().collect(Collectors.groupingBy(ProjectRoi::getPathFile)).forEach((pathFile, projectRoiList) -> {
-            final int imageIndex = getImageIndexByFilePath(pathFile);
-            final BufferedImage imageTemp = this.getManager().get(imageIndex);
-            final BufferedImage originalImageTemp = this.getManager().getOriginal(imageIndex, false);
-            projectRoiList.stream().sorted(comparator).forEach(projectRoi -> {
-                // Code duplication ( like everywhere in the project, sorry I don't have time )
-                final int roiSize = (int) (Math.max(Toolkit.getDefaultToolkit().getScreenSize().width, this.getImage().getWidth()) * 0.03);
-                final Pair<BigDecimal, BigDecimal> point = projectRoi.getPoint();
-                final OvalRoi outer = new OvalRoi(point.getFirst().doubleValue() - ((double) roiSize / 2), point.getSecond().doubleValue() - ((double) roiSize / 2), roiSize, roiSize);
-                final Overlay over = createOverlay(imageTemp.getWidth());
-                final int strokeWidth = Math.max((int) (imageTemp.getWidth() * 0.0025), 3);
-                Arrays.stream(imageTemp.getManager().getRoisAsArray()).forEach(over::add);
-                over.add(outer);
-                outer.setStrokeColor(Color.CYAN);
-                outer.setStrokeWidth(strokeWidth);
-                outer.setImage(imageTemp);
-                imageTemp.getManager().addRoi(outer);
-                imageTemp.getManager().setOverlay(over);
-                originalImageTemp.getManager().setOverlay(over);
-                this.refreshRoiGUI();
-            });
-        });
+    public void applyCorners(Project project) {
+        project.getProjectImages().stream().sorted(Comparator.comparingInt(ProjectImage::getId)).forEachOrdered(projectImage -> projectImage.getProjectImageRois().forEach(projectImageRoi -> {
+            final BufferedImage imageTemp = this.getManager().get(projectImage.getId() + projectImageRoi.getImageIndex());
+            final BufferedImage originalImageTemp = this.getManager().getOriginal(projectImage.getId() + projectImageRoi.getImageIndex(), false);
+            addRoiInLoadingProject(projectImageRoi, imageTemp, originalImageTemp);
+        }));
     }
 
-    private int getImageIndexByFilePath(String pathFile) {
+    private void addRoiInLoadingProject(ProjectImageRoi projectImageRoi, BufferedImage imageTemp, BufferedImage originalImageTemp) {
+        // Code duplication ( like everywhere in the project, sorry I don't have time )
+        final int roiSize = (int) (Math.max(Toolkit.getDefaultToolkit().getScreenSize().width, this.getImage().getWidth()) * 0.03);
+        final Pair<BigDecimal, BigDecimal> point = projectImageRoi.getPoint();
+        final OvalRoi outer = new OvalRoi(point.getFirst().doubleValue() - ((double) roiSize / 2), point.getSecond().doubleValue() - ((double) roiSize / 2), roiSize, roiSize);
+        final Overlay over = createOverlay(imageTemp.getWidth());
+        final int strokeWidth = Math.max((int) (imageTemp.getWidth() * 0.0025), 3);
+        Arrays.stream(imageTemp.getManager().getRoisAsArray()).forEach(over::add);
+        over.add(outer);
+        outer.setStrokeColor(Color.CYAN);
+        outer.setStrokeWidth(strokeWidth);
+        outer.setImage(imageTemp);
+        imageTemp.getManager().addRoi(outer);
+        imageTemp.getManager().setOverlay(over);
+        originalImageTemp.getManager().setOverlay(over);
+        this.refreshRoiGUI();
+    }
+
+    private int getImageIndexByFilePath(Pair<String, Integer> pair) {
         return IntStream.range(0, this.getManager().getImageFiles().size()).filter(i -> {
-            final String pathFileSub = pathFile.substring(pathFile.lastIndexOf(File.separator) + 1);
+            final String pathFileSub = pair.getFirst().substring(pair.getFirst().lastIndexOf(File.separator) + 1);
             return this.getManager().getImageFiles().get(i).getPathFile().endsWith(pathFileSub);
         }).findFirst().orElse(-1);
     }
@@ -699,7 +712,7 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
             this.getMainDialog().setPrevImageButtonEnabled(this.getManager().hasPrevious());
             this.getMainDialog().setNextImageButtonEnabled(this.getManager().hasNext());
             this.getMainDialog().setTitle(MessageFormat.format(MAIN_DIALOG_TITLE_PATTERN, this.getManager().getCurrentIndex() + 1, this.getManager().getNImages()));
-            this.getMainDialog().setAutoAlignButtonEnabled(filePaths.size() > 1);
+            this.getMainDialog().setAutoAlignButtonEnabled(this.getManager().getNImages() > 1);
             this.getLoadingDialog().hideDialog();
             if (this.getImage().isReduced())
                 JOptionPane.showMessageDialog(null, IMAGES_SCALED_MESSAGE, "Info", JOptionPane.INFORMATION_MESSAGE);

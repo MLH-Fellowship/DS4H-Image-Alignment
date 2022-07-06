@@ -1,17 +1,15 @@
 package ds4h.dialog.project;
 
 import ds4h.image.model.Project;
+import ds4h.image.model.ProjectImage;
 import ds4h.image.registration.ImageAlignment;
 import ds4h.services.ProjectService;
-import ij.IJ;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
+import java.util.stream.Collectors;
 
 public class ProjectDialog extends JPanel implements ActionListener {
     private static final String NEW_PROJECT = "New Project (Default, select two or more images to start the project)";
@@ -49,7 +47,7 @@ public class ProjectDialog extends JPanel implements ActionListener {
         radioPanel.add(continueButton);
 
         add(radioPanel, BorderLayout.LINE_START);
-        setBorder(BorderFactory.createEmptyBorder(20,20,20,20));
+        setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
         this.frameSetup();
     }
 
@@ -96,15 +94,17 @@ public class ProjectDialog extends JPanel implements ActionListener {
         if (project == null) {
             return;
         }
-        this.getImageAlignment().initialize(project.getFilePaths());
-        this.getImageAlignment().applyCorners(project.getProjectRois());
+        this.getImageAlignment().initialize(project.getProjectImages().stream().map(ProjectImage::getFilePath).collect(Collectors.toList()));
+        this.getImageAlignment().applyCorners(project);
     }
 
     private void run() {
         this.getImageAlignment().run();
-        deleteTempFilesOnExit(this.getImageAlignment());
     }
 
+   /* THIS HOOK CAN'T WORK ALONG WITH THE "Project Saving/Loading" feature:
+      if you use an aligned tiff image, that is initially saved in a tmp folder
+      that means, pls don't enable it if you don't have a good strategy in mind
     private static void deleteTempFilesOnExit(ImageAlignment imageAlignment) {
         Runtime.getRuntime().addShutdownHook(new Thread(() ->
             imageAlignment.getTempImages().forEach(tempImage -> {
@@ -114,7 +114,7 @@ public class ProjectDialog extends JPanel implements ActionListener {
                 IJ.showMessage(e.getMessage());
             }
         })));
-    }
+    }*/
 
     public void setNew(boolean aNew) {
         this.isNew = aNew;

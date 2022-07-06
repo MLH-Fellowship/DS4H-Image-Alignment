@@ -2,12 +2,13 @@ package ds4h.services;
 
 
 import ds4h.image.model.Project;
+import ds4h.image.model.ProjectImage;
 
 import java.io.File;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public class ProjectService {
     private static final String ROIS_AND_INDEXES = "rois_and_indexes";
@@ -25,7 +26,7 @@ public class ProjectService {
         final Set<String> files = FileService.getAllFiles(unzippedFile);
         Optional<String> xmlPath = files.stream().filter(file -> file.endsWith("xml")).findFirst();
         if (xmlPath.isPresent()) {
-            project = XMLService.loadProject(xmlPath.get());
+            project = XMLService.loadProject(xmlPath.get(), files);
         }
         return project;
     }
@@ -33,7 +34,7 @@ public class ProjectService {
     public static void save(Project project, String imagesDir, String outputPath) {
         String xmlPath = imagesDir + File.separator + "rois_with_index.xml";
         XMLService.create(ROIS_AND_INDEXES, "image", project, xmlPath);
-        List<String> files = new ArrayList<>(project.getFilePaths());
+        List<String> files = project.getProjectImages().stream().map(ProjectImage::getFilePath).collect(Collectors.toList());
         files.add(xmlPath);
         try {
             ZipService.zipIt(outputPath, files);

@@ -32,7 +32,7 @@ public class LeastSquareImageTransformation {
         } catch (Exception e) {
             IJ.showMessage(e.getMessage());
         }
-        t.setAlpha(1.0f);
+        t.setAlpha(2.0f);
         int meshResolution = 64;
         final ImagePlus target = template.createImagePlus();
         final ImageProcessor ipSource = source.getProcessor();
@@ -52,7 +52,7 @@ public class LeastSquareImageTransformation {
             IJ.showMessage("Not enough landmarks selected to find a transformation model.");
             return null;
         }
-        ipSource.setInterpolationMethod(ImageProcessor.BICUBIC);
+        ipSource.setInterpolationMethod(ImageProcessor.BILINEAR);
         mapping.mapInterpolated(ipSource, ipTarget);
         target.setProcessor("Transformed" + source.getTitle(), ipTarget);
         return target;

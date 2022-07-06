@@ -54,6 +54,7 @@ public class BriefBuilder extends AbstractBuilder<Mat> {
 
     private final Map<Pair<Integer, Integer>, Pair<List<Point>, List<Point>>> mapOfPoints = new HashMap<>();
     private final List<Mat> transformedImages = new ArrayList<>();
+    private boolean canGo = true;
 
     public BriefBuilder(LoadingDialog loadingDialog, ImagesManager manager, AutoAlignEvent event, OnAlignDialogEventListener listener) {
         super(loadingDialog, listener, manager, event);
@@ -66,6 +67,11 @@ public class BriefBuilder extends AbstractBuilder<Mat> {
         this.setMaximumSize(new Dimension());
         this.setFinalStack(new Dimension(this.getMaximumSize().width, this.getMaximumSize().height));
         this.cacheTransformedImages();
+        if (getTransformedImages().isEmpty()) {
+            canGo = false;
+            IJ.showMessage("Not enough matches");
+            return;
+        }
         this.setOffsets();
         this.preInitFinalStack();
         this.initFinalStack();
@@ -91,13 +97,17 @@ public class BriefBuilder extends AbstractBuilder<Mat> {
 
     private void cacheTransformedImages() {
         for (int index = 0; index < this.getImages().size(); index++) {
-            this.getTransformedImages().add(this.transformImage(index));
+            Mat transformedImage = this.transformImage(index);
+            if (transformedImage == null) {
+                continue;
+            }
+            this.getTransformedImages().add(transformedImage);
         }
     }
 
     @Override
     public boolean check() {
-        return true;
+        return canGo;
     }
 
     @Override
@@ -175,7 +185,6 @@ public class BriefBuilder extends AbstractBuilder<Mat> {
             // then to all the things need to create a virtual stack of images
             return warpedImage;
         }
-        IJ.showMessage("Not enough matches");
         return null;
     }
 

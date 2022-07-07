@@ -37,8 +37,8 @@ import java.util.*;
 
 import static org.opencv.core.CvType.CV_8U;
 import static org.opencv.core.CvType.CV_8UC1;
-import static org.opencv.imgcodecs.Imgcodecs.IMREAD_GRAYSCALE;
-import static org.opencv.imgcodecs.Imgcodecs.imread;
+import static org.opencv.imgcodecs.Imgcodecs.*;
+import static org.opencv.imgproc.Imgproc.boundingRect;
 
 /**
  * This plugin is made as a non-profit utility
@@ -67,19 +67,32 @@ public class BriefBuilder extends AbstractBuilder<Mat> {
         this.setMaximumSize(new Dimension());
         this.setFinalStack(new Dimension(this.getMaximumSize().width, this.getMaximumSize().height));
         this.cacheTransformedImages();
-        if (getTransformedImages().isEmpty()) {
+        if (this.getTransformedImages().isEmpty()) {
             canGo = false;
             IJ.showMessage("Not enough matches");
             return;
         }
         this.setOffsets();
+        this.findContoursOfTransformedImages();
         this.preInitFinalStack();
         this.initFinalStack();
     }
 
+    private void findContoursOfTransformedImages() {
+        this.getFinalStack().height = 0; // not nice, but it works
+        this.getTransformedImages().forEach(mat -> {
+            List<MatOfPoint> contours = new ArrayList<>();
+            Mat hierarchy = new Mat();
+            Imgproc.findContours(mat, contours, hierarchy, Imgproc.RETR_LIST, Imgproc.CHAIN_APPROX_SIMPLE);
+            contours.forEach(contour -> {
+                Rect rect = boundingRect(contour);
+                this.getFinalStack().height = Math.max(this.getFinalStack().height, rect.height);
+                this.getFinalStack().width = Math.max(this.getFinalStack().width, rect.width);
+            });
+        });
+    }
+
     private void preInitFinalStack() {
-        this.getFinalStack().width = this.getFinalStack().width + this.getMaxOffsetX();
-        this.getFinalStack().height += this.getSourceImage().height() == this.getMaximumSize().height ? this.getMaxOffsetY() : 0;
         // The final stack of the image is exceeding the maximum size of the images for imagej (see http://imagej.1557.x6.nabble.com/Large-image-td5015380.html)
         if (((double) this.getFinalStack().width * this.getFinalStack().height) > Integer.MAX_VALUE) {
             JOptionPane.showMessageDialog(null, IMAGE_SIZE_TOO_BIG, IMAGE_SIZE_TOO_BIG_TITLE, JOptionPane.ERROR_MESSAGE);
@@ -239,9 +252,10 @@ public class BriefBuilder extends AbstractBuilder<Mat> {
     private void importImages() {
         for (ImageFile imageFile : this.getManager().getImageFiles()) {
             try {
-                Mat matImage = imread(imageFile.getPathFile(), IMREAD_GRAYSCALE);
-                this.pathMap.put(matImage.dataAddr(), imageFile.getPathFile());
-                this.getImages().add(matImage);
+                List<Mat> images = new ArrayList<>();
+                imreadmulti(imageFile.getPathFile(), images, IMREAD_GRAYSCALE);
+                images.forEach(image -> this.pathMap.put(image.dataAddr(), imageFile.getPathFile()));
+                this.getImages().addAll(images);
             } catch (Exception e) {
                 IJ.showMessage(e.getMessage());
             }

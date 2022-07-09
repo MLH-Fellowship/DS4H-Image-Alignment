@@ -103,7 +103,7 @@ public class LeastSquareTransformationBuilder extends AbstractBuilder<BufferedIm
         this.setVirtualStack(new VirtualStack(sourceImg.getWidth(), sourceImg.getHeight(), ColorModel.getRGBdefault(), IJ.getDir(TEMP_PATH)));
         this.addToVirtualStack(sourceImg);
         for (int index = 1; index < this.getManager().getNImages(); index++) {
-            ImagePlus transformedImage = LeastSquareImageTransformation.transform(this.getManager().getOriginal(index, true), sourceImg, this.getSettingDialog().getEvent());
+            ImagePlus transformedImage = LeastSquareImageTransformation.transform(this.getManager().getOriginal(index, true), this.getManager().get(index, true), sourceImg, this.getSettingDialog().getEvent());
             if (transformedImage != null) {
                 this.addToVirtualStack(transformedImage);
             }
@@ -114,7 +114,7 @@ public class LeastSquareTransformationBuilder extends AbstractBuilder<BufferedIm
     public void alignKeepOriginal() {
         for (int index = 0; index < this.getManager().getNImages(); index++) {
             final ImageProcessor newProcessor = new ColorProcessor(this.getFinalStack().width, this.getFinalStack().height);
-            final ImagePlus transformedImage = LeastSquareImageTransformation.transform(this.getManager().getOriginal(index, true), this.getSourceImage(), this.getSettingDialog().getEvent());
+            final ImagePlus transformedImage = LeastSquareImageTransformation.transform(this.getManager().getOriginal(index, true), this.getManager().get(index, true), this.getSourceImage(), this.getSettingDialog().getEvent());
             final BufferedImage transformedOriginalImage = this.getManager().getOriginal(index, true);
             int offsetXOriginal = 0;
             if (this.getOffsetsX().get(index) < 0) {

@@ -23,7 +23,7 @@ public class LeastSquareImageTransformation {
     /**
      * Performs the least square transformation between two BufferedImages with a series of fixed parameters.
      */
-    public static ImagePlus transform(BufferedImage source, BufferedImage template, SettingEvent event) {
+    public static ImagePlus transform(BufferedImage source, BufferedImage sourceOriginal, BufferedImage template, SettingEvent event) {
         Mapping<?> mapping;
         final MovingLeastSquaresTransform t = new MovingLeastSquaresTransform();
         try {
@@ -37,7 +37,7 @@ public class LeastSquareImageTransformation {
         final ImagePlus target = template.createImagePlus();
         final ImageProcessor ipSource = source.getProcessor();
         final ImageProcessor ipTarget = source.getProcessor().createProcessor(template.getWidth(), template.getHeight());
-        final List<Point> sourcePoints = LeastSquareImageTransformation.getPoints(source);
+        final List<Point> sourcePoints = LeastSquareImageTransformation.getPoints(sourceOriginal);
         final List<Point> templatePoints = LeastSquareImageTransformation.getPoints(template);
         final int numMatches = Math.min(sourcePoints.size(), templatePoints.size());
         final ArrayList<PointMatch> matches = new ArrayList<>();

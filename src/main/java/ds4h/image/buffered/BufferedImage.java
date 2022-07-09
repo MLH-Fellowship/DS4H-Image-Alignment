@@ -92,8 +92,7 @@ public class BufferedImage extends ImagePlus {
             return;
           }
           List<Roi> rois = Arrays.stream(MainDialog.currentImage.manager.getRoisAsArray()).collect(Collectors.toList());
-          for (int i = 0; i < rois.size(); i++) {
-            Roi roi = rois.get(i);
+          for (Roi roi : rois) {
             if (roi.getBounds().contains(MainDialog.currentImage.getCanvas().getCursorLoc())) {
               startingRoi = roi;
             }

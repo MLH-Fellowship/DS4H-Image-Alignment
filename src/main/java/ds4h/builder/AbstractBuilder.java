@@ -21,10 +21,12 @@ import ij.io.FileSaver;
 import ij.process.ImageConverter;
 import ij.process.ImageProcessor;
 
+import javax.swing.*;
 import java.awt.*;
 import java.awt.image.ColorModel;
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public abstract class AbstractBuilder<T> implements AlignBuilder {
@@ -32,7 +34,7 @@ public abstract class AbstractBuilder<T> implements AlignBuilder {
     protected static final String TIFF_EXT = ".tiff";
     protected static final String IMAGE_SIZE_TOO_BIG = "During computation the expected file size overcame imagej file limit. To continue, deselect \"keep all pixel data\" option.";
     protected static final String IMAGE_SIZE_TOO_BIG_TITLE = "Error: image size too big";
-
+    private static final String SEPARATOR_NUMBERING = "-";
     private final LoadingDialog loadingDialog;
     private final OnAlignDialogEventListener listener;
     private final ImagesManager manager;
@@ -93,7 +95,7 @@ public abstract class AbstractBuilder<T> implements AlignBuilder {
             this.getAlignDialog().pack();
             this.getAlignDialog().setVisible(true);
         } catch (Exception e) {
-            IJ.showMessage(e.getMessage());
+            System.out.println(e.getMessage() + "  " + Arrays.toString(e.getStackTrace()));
         }
         this.getLoadingDialog().hideDialog();
     }
@@ -105,12 +107,20 @@ public abstract class AbstractBuilder<T> implements AlignBuilder {
         this.tempImages.add(path);
     }
 
-    protected void initFinalStack() {
-        Dimension finalStack = this.getFinalStack();
-        if (finalStack != null) {
-            this.setVirtualStack(new VirtualStack(this.getFinalStack().width, this.getFinalStack().height, ColorModel.getRGBdefault(), IJ.getDir(TEMP_PATH)));
-            this.addToVirtualStack(new ImagePlus("", this.getFinalStackImageProcessor()));
+    protected void checkFinalStackDimension() {
+        // The final stack of the image is exceeding the maximum size of the images for imagej (see http://imagej.1557.x6.nabble.com/Large-image-td5015380.html)
+        if (((double) this.getFinalStack().width * this.getFinalStack().height) > Integer.MAX_VALUE) {
+            JOptionPane.showMessageDialog(null, IMAGE_SIZE_TOO_BIG, IMAGE_SIZE_TOO_BIG_TITLE, JOptionPane.ERROR_MESSAGE);
+            this.getLoadingDialog().hideDialog(); // take care of this
         }
+    }
+
+    protected void setFinalStackToVirtualStack() {
+        this.setVirtualStack(new VirtualStack(this.getFinalStack().width, this.getFinalStack().height, ColorModel.getRGBdefault(), IJ.getDir(TEMP_PATH)));
+    }
+
+    protected void addFinalStackToVirtualStack() {
+        this.addToVirtualStack(new ImagePlus("", this.getFinalStackImageProcessor()));
     }
 
     public LoadingDialog getLoadingDialog() {

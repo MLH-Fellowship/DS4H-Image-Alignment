@@ -272,12 +272,12 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
         this.refreshRoiGUI();
     }
 
-    private int getImageIndexByFilePath(Pair<String, Integer> pair) {
+    /*private int getImageIndexByFilePath(Pair<String, Integer> pair) {
         return IntStream.range(0, this.getManager().getImageFiles().size()).filter(i -> {
             final String pathFileSub = pair.getFirst().substring(pair.getFirst().lastIndexOf(File.separator) + 1);
             return this.getManager().getImageFiles().get(i).getPathFile().endsWith(pathFileSub);
         }).findFirst().orElse(-1);
-    }
+    }*/
 
     private void copyCorners() {
         // get the indexes of all roi managers with at least a roi added
@@ -432,7 +432,7 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
             try {
                 this.alignHandler(builder);
             } catch (Exception e) {
-                IJ.showMessage(e.getMessage());
+                System.out.println(e.getMessage() + " " + Arrays.toString(e.getStackTrace()));
             }
             builder.getLoadingDialog().hideDialog();
         }, 10);

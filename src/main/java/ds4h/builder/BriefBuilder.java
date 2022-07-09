@@ -29,7 +29,6 @@ import org.opencv.imgproc.Imgproc;
 import org.opencv.xfeatures2d.BriefDescriptorExtractor;
 import org.opencv.xfeatures2d.StarDetector;
 
-import javax.swing.*;
 import java.awt.*;
 import java.awt.image.ColorModel;
 import java.util.List;
@@ -37,7 +36,8 @@ import java.util.*;
 
 import static org.opencv.core.CvType.CV_8U;
 import static org.opencv.core.CvType.CV_8UC1;
-import static org.opencv.imgcodecs.Imgcodecs.*;
+import static org.opencv.imgcodecs.Imgcodecs.IMREAD_GRAYSCALE;
+import static org.opencv.imgcodecs.Imgcodecs.imreadmulti;
 import static org.opencv.imgproc.Imgproc.boundingRect;
 
 /**
@@ -74,8 +74,9 @@ public class BriefBuilder extends AbstractBuilder<Mat> {
         }
         this.setOffsets();
         this.findContoursOfTransformedImages();
-        this.preInitFinalStack();
-        this.initFinalStack();
+        this.checkFinalStackDimension();
+        this.setFinalStackToVirtualStack();
+        this.addFinalStackToVirtualStack();
     }
 
     private void findContoursOfTransformedImages() {
@@ -90,14 +91,6 @@ public class BriefBuilder extends AbstractBuilder<Mat> {
                 this.getFinalStack().width = Math.max(this.getFinalStack().width, rect.width);
             });
         });
-    }
-
-    private void preInitFinalStack() {
-        // The final stack of the image is exceeding the maximum size of the images for imagej (see http://imagej.1557.x6.nabble.com/Large-image-td5015380.html)
-        if (((double) this.getFinalStack().width * this.getFinalStack().height) > Integer.MAX_VALUE) {
-            JOptionPane.showMessageDialog(null, IMAGE_SIZE_TOO_BIG, IMAGE_SIZE_TOO_BIG_TITLE, JOptionPane.ERROR_MESSAGE);
-            this.getLoadingDialog().hideDialog(); // take care of this
-        }
     }
 
     @Override

@@ -43,22 +43,18 @@ public class LeastSquareTransformationBuilder extends AbstractBuilder<BufferedIm
         this.setFinalStack(new Dimension(this.getMaximumSize().width, this.getMaximumSize().height));
         this.setOffsets();
         this.preInitFinalStack();
-        this.initFinalStack();
+        this.checkFinalStackDimension();
+        this.setFinalStackToVirtualStack();
     }
 
     private void preInitFinalStack() {
         this.getFinalStack().width = this.getFinalStack().width + this.getMaxOffsetX();
         this.getFinalStack().height += this.getSourceImage().getHeight() == this.getMaximumSize().height ? this.getMaxOffsetY() : 0;
-        // The final stack of the image is exceeding the maximum size of the images for imagej (see http://imagej.1557.x6.nabble.com/Large-image-td5015380.html)
-        if (((double) this.getFinalStack().width * this.getFinalStack().height) > Integer.MAX_VALUE) {
-            JOptionPane.showMessageDialog(null, IMAGE_SIZE_TOO_BIG, IMAGE_SIZE_TOO_BIG_TITLE, JOptionPane.ERROR_MESSAGE);
-            this.getLoadingDialog().hideDialog(); // take care of this
-        }
     }
 
     @Override
     public boolean check() {
-        return isShowSettingDialogSuccessful();
+        return this.isShowSettingDialogSuccessful();
     }
 
 
@@ -102,7 +98,8 @@ public class LeastSquareTransformationBuilder extends AbstractBuilder<BufferedIm
 
     @Override
     public void align() {
-        BufferedImage sourceImg = this.getManager().getOriginal(0, true);
+        this.addFinalStackToVirtualStack();
+        final BufferedImage sourceImg = this.getManager().getOriginal(0, true);
         this.setVirtualStack(new VirtualStack(sourceImg.getWidth(), sourceImg.getHeight(), ColorModel.getRGBdefault(), IJ.getDir(TEMP_PATH)));
         this.addToVirtualStack(sourceImg);
         for (int index = 1; index < this.getManager().getNImages(); index++) {
@@ -116,10 +113,9 @@ public class LeastSquareTransformationBuilder extends AbstractBuilder<BufferedIm
     @Override
     public void alignKeepOriginal() {
         for (int index = 0; index < this.getManager().getNImages(); index++) {
-            if (index == this.getSourceImageIndex()) continue;
-            ImageProcessor newProcessor = new ColorProcessor(this.getFinalStack().width, this.getMaximumSize().height);
-            ImagePlus transformedImage = LeastSquareImageTransformation.transform(this.getManager().getOriginal(index, true), this.getSourceImage(), this.getSettingDialog().getEvent());
-            BufferedImage transformedOriginalImage = this.getManager().getOriginal(index, true);
+            final ImageProcessor newProcessor = new ColorProcessor(this.getFinalStack().width, this.getFinalStack().height);
+            final ImagePlus transformedImage = LeastSquareImageTransformation.transform(this.getManager().getOriginal(index, true), this.getSourceImage(), this.getSettingDialog().getEvent());
+            final BufferedImage transformedOriginalImage = this.getManager().getOriginal(index, true);
             int offsetXOriginal = 0;
             if (this.getOffsetsX().get(index) < 0) {
                 offsetXOriginal = Math.abs(this.getOffsetsX().get(index));

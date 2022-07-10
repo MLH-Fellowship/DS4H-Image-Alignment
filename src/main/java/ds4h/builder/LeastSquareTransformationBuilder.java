@@ -29,6 +29,7 @@ public class LeastSquareTransformationBuilder extends AbstractBuilder<BufferedIm
     private static final String PROJECTIVE_WARNING = "Please if you choose to use projective you need 4 Corner Points per image";
     private List<RoiManager> managers;
     private SettingDialog settingDialog;
+    private BufferedImage sourceImageOriginal;
     private BufferedImage sourceImage;
 
 
@@ -99,11 +100,12 @@ public class LeastSquareTransformationBuilder extends AbstractBuilder<BufferedIm
     @Override
     public void align() {
         this.addFinalStackToVirtualStack();
-        final BufferedImage sourceImg = this.getManager().getOriginal(0, true);
+        final BufferedImage sourceImgOriginal = this.getManager().getOriginal(0, true);
+        final BufferedImage sourceImg = this.getManager().get(0, true);
         this.setVirtualStack(new VirtualStack(sourceImg.getWidth(), sourceImg.getHeight(), ColorModel.getRGBdefault(), IJ.getDir(TEMP_PATH)));
         this.addToVirtualStack(sourceImg);
         for (int index = 1; index < this.getManager().getNImages(); index++) {
-            ImagePlus transformedImage = LeastSquareImageTransformation.transform(this.getManager().getOriginal(index, true), this.getManager().get(index, true), sourceImg, this.getSettingDialog().getEvent());
+            ImagePlus transformedImage = LeastSquareImageTransformation.transform(this.getManager().getOriginal(index, true), this.getManager().get(index, true), sourceImgOriginal, sourceImg, this.getSettingDialog().getEvent());
             if (transformedImage != null) {
                 this.addToVirtualStack(transformedImage);
             }
@@ -114,7 +116,7 @@ public class LeastSquareTransformationBuilder extends AbstractBuilder<BufferedIm
     public void alignKeepOriginal() {
         for (int index = 0; index < this.getManager().getNImages(); index++) {
             final ImageProcessor newProcessor = new ColorProcessor(this.getFinalStack().width, this.getFinalStack().height);
-            final ImagePlus transformedImage = LeastSquareImageTransformation.transform(this.getManager().getOriginal(index, true), this.getManager().get(index, true), this.getSourceImage(), this.getSettingDialog().getEvent());
+            final ImagePlus transformedImage = LeastSquareImageTransformation.transform(this.getManager().getOriginal(index, true), this.getManager().get(index, true), this.getSourceImageOriginal(), this.getSourceImage(), this.getSettingDialog().getEvent());
             final BufferedImage transformedOriginalImage = this.getManager().getOriginal(index, true);
             int offsetXOriginal = 0;
             if (this.getOffsetsX().get(index) < 0) {
@@ -169,9 +171,15 @@ public class LeastSquareTransformationBuilder extends AbstractBuilder<BufferedIm
         return this.sourceImage;
     }
 
+
+    private BufferedImage getSourceImageOriginal() {
+        return this.sourceImageOriginal;
+    }
+
     @SuppressWarnings("SameParameterValue")
     private void setSourceImage(boolean isWholeSlide) {
-        this.sourceImage = this.getManager().getOriginal(this.getSourceImageIndex(), isWholeSlide);
+        this.sourceImageOriginal = this.getManager().getOriginal(this.getSourceImageIndex(), isWholeSlide);
+        this.sourceImage = this.getManager().get(this.getSourceImageIndex(), isWholeSlide);
     }
 
     private List<RoiManager> getManagers() {

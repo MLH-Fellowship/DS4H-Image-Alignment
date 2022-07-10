@@ -233,6 +233,7 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
 
     private void handleMovedRoi() {
         this.getMainDialog().refreshROIList(this.getImage().getManager());
+
         if (this.getPreviewDialog() != null) this.getPreviewDialog().drawRois();
     }
 
@@ -666,6 +667,7 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
             this.getMainDialog().setNextImageButtonEnabled(getManager().hasNext());
             this.getMainDialog().setTitle(MessageFormat.format(MAIN_DIALOG_TITLE_PATTERN, finalIndex, this.getManager().getNImages()));
             this.refreshRoiGUI();
+            this.getRemoveImageDialog().dispose();
         }
     }
 

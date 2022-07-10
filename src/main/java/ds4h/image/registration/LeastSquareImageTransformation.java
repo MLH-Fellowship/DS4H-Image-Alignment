@@ -23,7 +23,7 @@ public class LeastSquareImageTransformation {
     /**
      * Performs the least square transformation between two BufferedImages with a series of fixed parameters.
      */
-    public static ImagePlus transform(BufferedImage source, BufferedImage sourceOriginal, BufferedImage template, SettingEvent event) {
+    public static ImagePlus transform(BufferedImage sourceOriginal, BufferedImage source, BufferedImage templateOriginal, BufferedImage template, SettingEvent event) {
         Mapping<?> mapping;
         final MovingLeastSquaresTransform t = new MovingLeastSquaresTransform();
         try {
@@ -34,10 +34,10 @@ public class LeastSquareImageTransformation {
         }
         t.setAlpha(2.0f);
         int meshResolution = 64;
-        final ImagePlus target = template.createImagePlus();
-        final ImageProcessor ipSource = source.getProcessor();
-        final ImageProcessor ipTarget = source.getProcessor().createProcessor(template.getWidth(), template.getHeight());
-        final List<Point> sourcePoints = LeastSquareImageTransformation.getPoints(sourceOriginal);
+        final ImagePlus target = templateOriginal.createImagePlus();
+        final ImageProcessor ipSource = sourceOriginal.getProcessor();
+        final ImageProcessor ipTarget = sourceOriginal.getProcessor().createProcessor(templateOriginal.getWidth(), templateOriginal.getHeight());
+        final List<Point> sourcePoints = LeastSquareImageTransformation.getPoints(source);
         final List<Point> templatePoints = LeastSquareImageTransformation.getPoints(template);
         final int numMatches = Math.min(sourcePoints.size(), templatePoints.size());
         final ArrayList<PointMatch> matches = new ArrayList<>();
@@ -46,7 +46,7 @@ public class LeastSquareImageTransformation {
             matches.add(new PointMatch(sourcePoints.get(i), templatePoints.get(i)));
         try {
             t.setMatches(matches);
-            mapping = new TransformMeshMapping<>(new CoordinateTransformMesh(t, meshResolution, source.getWidth(), source.getHeight()));
+            mapping = new TransformMeshMapping<>(new CoordinateTransformMesh(t, meshResolution, sourceOriginal.getWidth(), sourceOriginal.getHeight()));
         } catch (final Exception e) {
             IJ.showMessage(e.getMessage());
             IJ.showMessage("Not enough landmarks selected to find a transformation model.");
@@ -54,7 +54,7 @@ public class LeastSquareImageTransformation {
         }
         ipSource.setInterpolationMethod(ImageProcessor.BILINEAR);
         mapping.mapInterpolated(ipSource, ipTarget);
-        target.setProcessor("Transformed" + source.getTitle(), ipTarget);
+        target.setProcessor("Transformed" + sourceOriginal.getTitle(), ipTarget);
         return target;
     }
 

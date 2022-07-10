@@ -34,7 +34,6 @@ public abstract class AbstractBuilder<T> implements AlignBuilder {
     protected static final String TIFF_EXT = ".tiff";
     protected static final String IMAGE_SIZE_TOO_BIG = "During computation the expected file size overcame imagej file limit. To continue, deselect \"keep all pixel data\" option.";
     protected static final String IMAGE_SIZE_TOO_BIG_TITLE = "Error: image size too big";
-    private static final String SEPARATOR_NUMBERING = "-";
     private final LoadingDialog loadingDialog;
     private final OnAlignDialogEventListener listener;
     private final ImagesManager manager;

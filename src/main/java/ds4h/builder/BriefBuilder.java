@@ -12,8 +12,8 @@ package ds4h.builder;
 import ds4h.dialog.align.OnAlignDialogEventListener;
 import ds4h.dialog.loading.LoadingDialog;
 import ds4h.dialog.main.event.AutoAlignEvent;
-import ds4h.image.manager.ImagesManager;
-import ds4h.image.model.ImageFile;
+import ds4h.image.model.manager.ImagesEditor;
+import ds4h.image.model.manager.ImageFile;
 import ds4h.utils.Pair;
 import ij.IJ;
 import ij.ImagePlus;
@@ -56,14 +56,14 @@ public class BriefBuilder extends AbstractBuilder<Mat> {
     private final List<Mat> transformedImages = new ArrayList<>();
     private boolean canGo = true;
 
-    public BriefBuilder(LoadingDialog loadingDialog, ImagesManager manager, AutoAlignEvent event, OnAlignDialogEventListener listener) {
-        super(loadingDialog, listener, manager, event);
+    public BriefBuilder(LoadingDialog loadingDialog, ImagesEditor editor, AutoAlignEvent event, OnAlignDialogEventListener listener) {
+        super(loadingDialog, listener, editor, event);
     }
 
     @Override
     public void init() {
         this.importImages();
-        this.setImagesDimensions(this.getManager().getImagesDimensions());
+        this.setImagesDimensions(this.getEditor().getImagesDimensions());
         this.setMaximumSize(new Dimension());
         this.setFinalStack(new Dimension(this.getMaximumSize().width, this.getMaximumSize().height));
         this.cacheTransformedImages();
@@ -243,7 +243,7 @@ public class BriefBuilder extends AbstractBuilder<Mat> {
     }
 
     private void importImages() {
-        for (ImageFile imageFile : this.getManager().getImageFiles()) {
+        for (ImageFile imageFile : this.getEditor().getImageFiles()) {
             try {
                 List<Mat> images = new ArrayList<>();
                 imreadmulti(imageFile.getPathFile(), images, IMREAD_GRAYSCALE);

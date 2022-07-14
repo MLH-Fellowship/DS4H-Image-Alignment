@@ -1,6 +1,6 @@
 package ds4h.dialog.remove;
 
-import ds4h.image.model.ImageFile;
+import ds4h.image.model.manager.ImageFile;
 import ds4h.dialog.remove.event.RemoveImageEvent;
 import ij.IJ;
 

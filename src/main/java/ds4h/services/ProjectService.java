@@ -1,8 +1,8 @@
 package ds4h.services;
 
 
-import ds4h.image.model.Project;
-import ds4h.image.model.ProjectImage;
+import ds4h.image.model.project.Project;
+import ds4h.image.model.project.ProjectImage;
 
 import java.io.File;
 import java.util.List;

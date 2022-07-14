@@ -31,12 +31,12 @@ import ds4h.dialog.remove.OnRemoveDialogEventListener;
 import ds4h.dialog.remove.RemoveImageDialog;
 import ds4h.dialog.remove.event.IRemoveDialogEvent;
 import ds4h.dialog.remove.event.RemoveImageEvent;
-import ds4h.image.buffered.BufferedImage;
-import ds4h.image.manager.ImagesManager;
-import ds4h.image.model.ImageFile;
-import ds4h.image.model.Project;
-import ds4h.image.model.ProjectImage;
-import ds4h.image.model.ProjectImageRoi;
+import ds4h.image.model.manager.ImagesEditor;
+import ds4h.image.model.manager.ImageFile;
+import ds4h.image.model.project.Project;
+import ds4h.image.model.project.ProjectImage;
+import ds4h.image.model.project.ProjectImageRoi;
+import ds4h.image.model.manager.slide.SlideImage;
 import ds4h.services.FileService;
 import ds4h.services.ProjectService;
 import ds4h.services.loader.Loader;
@@ -52,7 +52,6 @@ import ij.io.FileSaver;
 import ij.io.SaveDialog;
 import ij.plugin.frame.RoiManager;
 import loci.common.enumeration.EnumException;
-import loci.formats.FormatException;
 import loci.formats.UnknownFormatException;
 import org.opencv.core.Mat;
 
@@ -94,9 +93,7 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
     }
 
     private List<String> tempImages = new ArrayList<>();
-    private ImagesManager manager;
-    private BufferedImage image = null;
-    private BufferedImage originalImage = null;
+    private ImagesEditor editor;
     private MainDialog mainDialog;
     private PreviewDialog previewDialog;
     private AlignDialog alignDialog;
@@ -107,8 +104,8 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
 
     @Override
     public void onMainDialogEvent(MainDialogEvent dialogEvent) {
-        if (this.image != null) {
-            WindowManager.setCurrentWindow(this.image.getWindow());
+        if (this.getEditor().getCurrentImage() != null) {
+            WindowManager.setCurrentWindow(this.getEditor().getCurrentImage().getWindow());
         }
         /**
          * TODO: A solution to this big switch case could be simply Polymorphism!
@@ -191,56 +188,55 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
     }
 
     private void saveProject() {
-        int counterBeforeThisId = 0;
-        final Project project = new Project();
-        final List<ProjectImage> projectImages = new ArrayList<>();
-        final List<ImageFile> imageFiles = this.getManager().getImageFiles();
-        for (final ImageFile imageFile : imageFiles) {
-            final ProjectImage projectImage = new ProjectImage(imageFile.getNImages(), imageFile.getPathFile());
-            final List<ProjectImageRoi> projectImageRois = new ArrayList<>();
-            for (int imageFileIndex = 0; imageFileIndex < imageFile.getNImages(); imageFileIndex++) {
-                projectImage.setId(counterBeforeThisId);
-                RoiManager roiManager;
-                try {
-                    roiManager = imageFile.getImage(imageFileIndex, true).getManager();
-                } catch (IOException | FormatException e) {
-                    throw new RuntimeException(e);
+        try {
+            this.getEditor().loadImagesWholeSlides();
+            int counterBeforeThisId = 0;
+            final Project project = new Project();
+            final List<ProjectImage> projectImages = new ArrayList<>();
+            final List<ImageFile> imageFiles = this.getEditor().getImageFiles();
+            for (final ImageFile imageFile : imageFiles) {
+                final ProjectImage projectImage = new ProjectImage(imageFile.getImagesCounter(), imageFile.getPathFile());
+                final List<ProjectImageRoi> projectImageRois = new ArrayList<>();
+                for (int imageFileIndex = 0; imageFileIndex < imageFile.getImagesCounter(); imageFileIndex++) {
+                    projectImage.setId(counterBeforeThisId);
+                    final RoiManager roiManager = imageFile.getImage(imageFileIndex, true).getManager();
+                    final Roi[] roisAsArray = roiManager.getRoisAsArray();
+                    for (int roiIndex = 0; roiIndex < roisAsArray.length; roiIndex++) {
+                        Roi roi = roisAsArray[roiIndex];
+                        final BigDecimal x = BigDecimal.valueOf(roi.getRotationCenter().xpoints[0]);
+                        final BigDecimal y = BigDecimal.valueOf(roi.getRotationCenter().ypoints[0]);
+                        final ProjectImageRoi projectImageRoi = new ProjectImageRoi();
+                        projectImageRoi.setPoint(new Pair<>(x, y));
+                        projectImageRoi.setId(roiIndex);
+                        projectImageRoi.setImageIndex(imageFileIndex);
+                        projectImageRois.add(projectImageRoi);
+                    }
                 }
-                Roi[] roisAsArray = roiManager.getRoisAsArray();
-                for (int roiIndex = 0; roiIndex < roisAsArray.length; roiIndex++) {
-                    Roi roi = roisAsArray[roiIndex];
-                    final BigDecimal x = BigDecimal.valueOf(roi.getRotationCenter().xpoints[0]);
-                    final BigDecimal y = BigDecimal.valueOf(roi.getRotationCenter().ypoints[0]);
-                    final ProjectImageRoi projectImageRoi = new ProjectImageRoi();
-                    projectImageRoi.setPoint(new Pair<>(x, y));
-                    projectImageRoi.setId(roiIndex);
-                    projectImageRoi.setImageIndex(imageFileIndex);
-                    projectImageRois.add(projectImageRoi);
-                }
+                counterBeforeThisId += imageFile.getImagesCounter();
+                projectImage.setProjectImageRois(projectImageRois);
+                projectImages.add(projectImage);
             }
-            counterBeforeThisId += imageFile.getNImages();
-            projectImage.setProjectImageRois(projectImageRois);
-            projectImages.add(projectImage);
+            project.setProjectImages(projectImages);
+            final String outputPath = FileService.chooseDirectoryViaIJ();
+            if (outputPath.isEmpty()) {
+                return;
+            }
+            ProjectService.save(project, this.getEditor().getCurrentImage().getFilePath().substring(0, this.getEditor().getCurrentImage().getFilePath().lastIndexOf(File.separator)), outputPath);
+            JOptionPane.showMessageDialog(null, "The project was saved here: " + outputPath, SAVE_PROJECT_TITLE_SUCCESS, JOptionPane.WARNING_MESSAGE);
+        } catch (Exception e) {
+            System.out.println(Arrays.toString(e.getStackTrace()));
         }
-        project.setProjectImages(projectImages);
-        final String outputPath = FileService.chooseDirectoryViaIJ();
-        if (outputPath.isEmpty()) {
-            return;
-        }
-        ProjectService.save(project, getImage().getFilePath().substring(0, getImage().getFilePath().lastIndexOf(File.separator)), outputPath);
-        JOptionPane.showMessageDialog(null, "The project was saved here: " + outputPath, SAVE_PROJECT_TITLE_SUCCESS, JOptionPane.WARNING_MESSAGE);
     }
 
     private void handleMovedRoi() {
-        this.getMainDialog().refreshROIList(this.getImage().getManager());
-
+        this.getMainDialog().refreshROIList(this.getEditor().getCurrentImage().getManager());
         if (this.getPreviewDialog() != null) this.getPreviewDialog().drawRois();
     }
 
     private void removeImage() {
         this.getLoadingDialog().showDialog();
         Utilities.setTimeout(() -> {
-            this.removeImageDialog = new RemoveImageDialog(this.manager.getImageFiles(), this);
+            this.removeImageDialog = new RemoveImageDialog(this.getEditor().getImageFiles(), this);
             this.getRemoveImageDialog().setVisible(true);
             this.getLoadingDialog().hideDialog();
             this.getLoadingDialog().requestFocus();
@@ -249,27 +245,27 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
 
     public void applyCorners(Project project) {
         project.getProjectImages().stream().sorted(Comparator.comparingInt(ProjectImage::getId)).forEachOrdered(projectImage -> projectImage.getProjectImageRois().forEach(projectImageRoi -> {
-            final BufferedImage imageTemp = this.getManager().get(projectImage.getId() + projectImageRoi.getImageIndex());
-            final BufferedImage originalImageTemp = this.getManager().getOriginal(projectImage.getId() + projectImageRoi.getImageIndex(), false);
-            addRoiInLoadingProject(projectImageRoi, imageTemp, originalImageTemp);
+            final SlideImage slideImageTemp = this.getEditor().getSlideImage(projectImage.getId() + projectImageRoi.getImageIndex());
+            final SlideImage originalSlideImageTemp = this.getEditor().getOriginalSlideImage(projectImage.getId() + projectImageRoi.getImageIndex());
+            addRoiInLoadingProject(projectImageRoi, slideImageTemp, originalSlideImageTemp);
         }));
     }
 
-    private void addRoiInLoadingProject(ProjectImageRoi projectImageRoi, BufferedImage imageTemp, BufferedImage originalImageTemp) {
+    private void addRoiInLoadingProject(ProjectImageRoi projectImageRoi, SlideImage slideImageTemp, SlideImage originalSlideImageTemp) {
         // Code duplication ( like everywhere in the project, sorry I don't have time )
-        final int roiSize = (int) (Math.max(Toolkit.getDefaultToolkit().getScreenSize().width, this.getImage().getWidth()) * 0.03);
+        final int roiSize = (int) (Math.max(Toolkit.getDefaultToolkit().getScreenSize().width, this.getEditor().getCurrentImage().getWidth()) * 0.03);
         final Pair<BigDecimal, BigDecimal> point = projectImageRoi.getPoint();
         final OvalRoi outer = new OvalRoi(point.getFirst().doubleValue() - ((double) roiSize / 2), point.getSecond().doubleValue() - ((double) roiSize / 2), roiSize, roiSize);
-        final Overlay over = createOverlay(imageTemp.getWidth());
-        final int strokeWidth = Math.max((int) (imageTemp.getWidth() * 0.0025), 3);
-        Arrays.stream(imageTemp.getManager().getRoisAsArray()).forEach(over::add);
+        final Overlay over = createOverlay(slideImageTemp.getWidth());
+        final int strokeWidth = Math.max((int) (slideImageTemp.getWidth() * 0.0025), 3);
+        Arrays.stream(slideImageTemp.getManager().getRoisAsArray()).forEach(over::add);
         over.add(outer);
         outer.setStrokeColor(Color.CYAN);
         outer.setStrokeWidth(strokeWidth);
-        outer.setImage(imageTemp);
-        imageTemp.getManager().addRoi(outer);
-        imageTemp.getManager().setOverlay(over);
-        originalImageTemp.getManager().setOverlay(over);
+        outer.setImage(slideImageTemp);
+        slideImageTemp.getManager().addRoi(outer);
+        slideImageTemp.getManager().setOverlay(over);
+        originalSlideImageTemp.getManager().setOverlay(over);
         this.refreshRoiGUI();
     }
 
@@ -284,14 +280,18 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
         // get the indexes of all roi managers with at least a roi added
         List<Integer> imageIndexes;
         // remove the index of the current image, if present.
-        List<Integer> list = new ArrayList<>();
-        Roi[] roisOfCurrentImage = this.getImage().getManager().getRoisAsArray();
-        for (RoiManager roiManager : this.getManager().getRoiManagers()) {
+        final List<Integer> list = new ArrayList<>();
+        final SlideImage currentSlideImage = this.getMainDialog().getCurrentImage();
+        final Roi[] roisOfCurrentImage = currentSlideImage.getManager().getRoisAsArray();
+        final List<ImageFile> images = this.getEditor().getImageFiles();
+        final List<RoiManager> roiManagers = images.stream().flatMap(imageFile -> imageFile.getImages().stream()).map(SlideImage::getManager).collect(Collectors.toList());
+
+        for (RoiManager roiManager : roiManagers) {
             if (roiManager.getRoisAsArray().length == 0) {
                 continue;
             }
-            int index = this.getManager().getRoiManagers().indexOf(roiManager);
-            if (index != this.getManager().getCurrentIndex()) {
+            int index = roiManagers.indexOf(roiManager);
+            if (index != this.getEditor().getCurrentPosition()) {
                 list.add(index);
             }
         }
@@ -302,15 +302,15 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
         // n means most certainly "answer"
         int n = JOptionPane.showOptionDialog(new JFrame(), optionList, "Copy from", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE, null, new Object[]{"Copy", "Cancel"}, JOptionPane.YES_OPTION);
         if (n == JOptionPane.YES_OPTION) {
-            BufferedImage chosenImage = this.getManager().get(optionList.getSelectedIndex());
-            RoiManager selectedManager = this.getManager().getRoiManagers().get(imageIndexes.get(optionList.getSelectedIndex()));
+            SlideImage chosenSlideImage = this.editor.getSlideImage(optionList.getSelectedIndex());
+            RoiManager selectedManager = this.getEditor().getSlideImage(imageIndexes.get(optionList.getSelectedIndex())).getManager();
             Map<Integer, Pair<BigDecimal, BigDecimal>> roiPoints = this.handleRoiInNewImage(roisOfCurrentImage, selectedManager);
             // I'll definitely have to refactor all this duplicated code hanging around
             if (!roiPoints.isEmpty()) {
-                this.handleRoiPointsThatWereNotAdded(chosenImage, roiPoints);
+                this.handleRoiPointsThatWereNotAdded(chosenSlideImage, roiPoints);
             }
             this.refreshRoiGUI();
-            this.getImage().setCopyCornersMode();
+            this.getEditor().getCurrentImage().setCopyCornersMode(true);
         }
     }
 
@@ -319,13 +319,13 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
         Roi[] rois = selectedManager.getRoisAsArray();
         IntStream.range(0, rois.length).forEach(index -> {
             final Roi roi = rois[index];
-            final BigDecimal x = BigDecimal.valueOf(roi.getRotationCenter().xpoints[0]);
-            final BigDecimal y = BigDecimal.valueOf(roi.getRotationCenter().ypoints[0]);
+            final BigDecimal x = BigDecimal.valueOf(roi.getXBase() + (roi.getFloatWidth() / 2));
+            final BigDecimal y = BigDecimal.valueOf(roi.getYBase() + (roi.getFloatHeight() / 2));
             Pair<BigDecimal, BigDecimal> point = new Pair<>(x, y);
             if (this.isAlreadyThere(point, roisOfCurrentImage)) {
                 return;
             }
-            if (point.getFirst().intValue() < this.getImage().getWidth() && point.getSecond().intValue() < this.getImage().getHeight()) {
+            if (point.getFirst().intValue() < this.getEditor().getCurrentImage().getWidth() && point.getSecond().intValue() < this.getEditor().getCurrentImage().getHeight()) {
                 this.onMainDialogEvent(new AddRoiEvent(point));
                 return;
             }
@@ -334,7 +334,7 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
         return roiPoints;
     }
 
-    private void handleRoiPointsThatWereNotAdded(BufferedImage chosenImage, Map<Integer, Pair<BigDecimal, BigDecimal>> roiPoints) {
+    private void handleRoiPointsThatWereNotAdded(SlideImage chosenSlideImage, Map<Integer, Pair<BigDecimal, BigDecimal>> roiPoints) {
         String[] buttons = {"Yes", "No"};
         String message = "The corners out of bounds are deleted. Do you want to delete the same corners in the referenced image?";
         int answer = JOptionPane.showOptionDialog(null, message, CAREFUL_NOW_TITLE, JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE, null, buttons, buttons[1]);
@@ -342,13 +342,13 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
             int[] roisIndices = roiPoints.keySet().stream().mapToInt(value -> value).toArray();
             // Keep in mind that when you want to delete multiple rois, it should be done from in reverse order
             IntStream.range(0, roisIndices.length).map(i -> roisIndices[roisIndices.length - 1 - i]).forEachOrdered(index -> {
-                chosenImage.getManager().select(index);
-                if (chosenImage.getManager().isSelected(index)) {
-                    chosenImage.getManager().runCommand(DELETE_COMMAND);
+                chosenSlideImage.getManager().select(index);
+                if (chosenSlideImage.getManager().isSelected(index)) {
+                    chosenSlideImage.getManager().runCommand(DELETE_COMMAND);
                 }
             });
         }
-        this.warnUserIfNumberOfCornersIsNotTheSame(chosenImage, image);
+        this.warnUserIfNumberOfCornersIsNotTheSame(chosenSlideImage, getEditor().getCurrentImage());
     }
 
     private boolean isAlreadyThere(Pair<BigDecimal, BigDecimal> point, Roi[] roisOfCurrentImage) {
@@ -365,9 +365,9 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
         return isThere;
     }
 
-    private void warnUserIfNumberOfCornersIsNotTheSame(BufferedImage chosenImage, BufferedImage image) {
-        int lengthCornersChosenImage = chosenImage.getManager().getRoisAsArray().length;
-        int lengthCornersCurrentImage = image.getManager().getRoisAsArray().length;
+    private void warnUserIfNumberOfCornersIsNotTheSame(SlideImage chosenSlideImage, SlideImage slideImage) {
+        final int lengthCornersChosenImage = chosenSlideImage.getManager().getRoisAsArray().length;
+        final int lengthCornersCurrentImage = slideImage.getManager().getRoisAsArray().length;
         if (lengthCornersChosenImage != lengthCornersCurrentImage) {
             JOptionPane.showMessageDialog(null, TOO_FEW_CORNER_POINTS, "Warning", JOptionPane.WARNING_MESSAGE);
         }
@@ -391,9 +391,9 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
             if (this.getTotalMemory() >= Runtime.getRuntime().maxMemory()) {
                 JOptionPane.showMessageDialog(null, INSUFFICIENT_MEMORY_MESSAGE, INSUFFICIENT_MEMORY_TITLE, JOptionPane.ERROR_MESSAGE);
             }
-            this.getManager().addFile(pathFile);
-            this.getManager().addFileToOriginalList(pathFile);
-            if (this.getManager().getNImages() > 1) {
+            this.getEditor().addFile(pathFile);
+            this.getEditor().addFileToOriginalList(pathFile);
+            if (this.getEditor().getAllImagesCounterSum() > 1) {
                 this.getMainDialog().setAutoAlignButtonEnabled(true);
             }
         } catch (UnknownFormatException e) {
@@ -402,9 +402,9 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
         } catch (Exception e) {
             IJ.showMessage(e.getMessage());
         }
-        this.getMainDialog().setPrevImageButtonEnabled(this.getManager().hasPrevious());
-        this.getMainDialog().setNextImageButtonEnabled(this.getManager().hasNext());
-        this.getMainDialog().setTitle(MessageFormat.format(MAIN_DIALOG_TITLE_PATTERN, this.getManager().getCurrentIndex() + 1, this.getManager().getNImages()));
+        this.getMainDialog().setPrevImageButtonEnabled(this.getEditor().hasPrevious());
+        this.getMainDialog().setNextImageButtonEnabled(this.getEditor().hasNext());
+        this.getMainDialog().setTitle(MessageFormat.format(MAIN_DIALOG_TITLE_PATTERN, this.getEditor().getCurrentPosition() + 1, this.getEditor().getAllImagesCounterSum()));
         this.refreshRoiGUI();
     }
 
@@ -413,7 +413,7 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
      * TODO: refactor codebase when you have time
      **/
     private void autoAlign(AutoAlignEvent event) {
-        AbstractBuilder<Mat> builder = new BriefBuilder(this.getLoadingDialog(), this.getManager(), event, this);
+        AbstractBuilder<Mat> builder = new BriefBuilder(this.getLoadingDialog(), this.getEditor(), event, this);
         builder.getLoadingDialog().showDialog();
         Utilities.setTimeout(() -> {
             try {
@@ -427,7 +427,7 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
     }
 
     private void align(AlignEvent event) {
-        AbstractBuilder<BufferedImage> builder = new LeastSquareTransformationBuilder(this.getLoadingDialog(), this.getManager(), event, this);
+        AbstractBuilder<SlideImage> builder = new LeastSquareTransformationBuilder(this.getLoadingDialog(), this.getEditor(), event, this);
         builder.getLoadingDialog().showDialog();
         Utilities.setTimeout(() -> {
             try {
@@ -451,13 +451,13 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
             builder.build();
             this.alignDialog = builder.getAlignDialog();
             this.tempImages = builder.getTempImages();
-            this.getMainDialog().setAutoAlignButtonEnabled(this.getManager().getNImages() > 1);
+            this.getMainDialog().setAutoAlignButtonEnabled(this.getEditor().getAllImagesCounterSum() > 1);
         }
     }
 
     private void handleDeselectedRoi(DeselectedRoiEvent dialogEvent) {
-        Arrays.stream(this.getImage().getManager().getSelectedRoisAsArray()).forEach(roi -> roi.setStrokeColor(Color.CYAN));
-        this.getImage().getManager().select(dialogEvent.getRoiIndex());
+        Arrays.stream(this.getEditor().getCurrentImage().getManager().getSelectedRoisAsArray()).forEach(roi -> roi.setStrokeColor(Color.CYAN));
+        this.getEditor().getCurrentImage().getManager().select(dialogEvent.getRoiIndex());
         this.getPreviewDialog().drawRois();
     }
 
@@ -466,25 +466,25 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
     }
 
     private void deselectAllRois() {
-        Arrays.stream(this.getImage().getManager().getRoisAsArray()).forEach(roi -> roi.setStrokeColor(Color.CYAN));
+        Arrays.stream(this.getEditor().getCurrentImage().getManager().getRoisAsArray()).forEach(roi -> roi.setStrokeColor(Color.CYAN));
     }
 
     private void handleSelectedRoi(SelectedRoiEvent dialogEvent) {
         this.deselectAllRois();
-        this.getImage().getManager().select(dialogEvent.getRoiIndex());
-        this.getImage().getRoi().setStrokeColor(Color.yellow);
+        this.getEditor().getCurrentImage().getManager().select(dialogEvent.getRoiIndex());
+        this.getEditor().getCurrentImage().getRoi().setStrokeColor(Color.yellow);
         this.drawAfterHandlingRois();
     }
 
     private void handleSelectedRois(SelectedRoisEvent dialogEvent) {
         this.deselectAllRois();
         final int[] rois = dialogEvent.getSelectedIndices();
-        final Roi[] roiArrays = this.getImage().getManager().getRoisAsArray();
+        final Roi[] roiArrays = this.getEditor().getCurrentImage().getManager().getRoisAsArray();
         IntStream.range(0, roiArrays.length).forEach(finalIndex -> {
             final boolean isYellow = Arrays.stream(rois).anyMatch(roiIndex -> finalIndex == roiIndex);
             final Roi roi = roiArrays[finalIndex];
             if (isYellow) {
-                this.getImage().getManager().select(finalIndex);
+                this.getEditor().getCurrentImage().getManager().select(finalIndex);
                 roi.setStrokeColor(Color.YELLOW);
             }
         });
@@ -492,7 +492,7 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
     }
 
     private void drawAfterHandlingRois() {
-        this.getImage().updateAndDraw();
+        this.getEditor().getCurrentImage().updateAndDraw();
         if (this.getPreviewDialog() != null && this.getPreviewDialog().isVisible()) {
             this.getPreviewDialog().drawRois();
         }
@@ -501,19 +501,19 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
     private void addRoi(AddRoiEvent dialogEvent) {
         Prefs.useNamesAsLabels = true;
         Prefs.noPointLabels = false;
-        final int roiSize = (int) (Math.max(Toolkit.getDefaultToolkit().getScreenSize().width, this.getImage().getWidth()) * 0.03);
+        final int roiSize = (int) (Math.max(Toolkit.getDefaultToolkit().getScreenSize().width, this.getEditor().getCurrentImage().getWidth()) * 0.03);
         final OvalRoi outer = new OvalRoi(dialogEvent.getClickCoordinates().getFirst().doubleValue() - ((double) roiSize / 2), dialogEvent.getClickCoordinates().getSecond().doubleValue() - ((double) roiSize / 2), roiSize, roiSize);
         // get roughly the 0,25% of the width of the image as stroke width of th rois added.
         // If the resultant value is too small, set it as the minimum value
-        final int strokeWidth = Math.max((int) (this.getImage().getWidth() * 0.0025), 3);
+        final int strokeWidth = Math.max((int) (this.getEditor().getCurrentImage().getWidth() * 0.0025), 3);
         outer.setStrokeWidth(strokeWidth);
-        outer.setImage(this.image);
+        outer.setImage(this.getEditor().getCurrentImage());
         outer.setStrokeColor(Color.CYAN);
         final Overlay over = this.createOverlay(strokeWidth);
-        Arrays.stream(this.image.getManager().getRoisAsArray()).forEach(over::add);
+        Arrays.stream(this.getEditor().getCurrentImage().getManager().getRoisAsArray()).forEach(over::add);
         over.add(outer);
-        this.getImage().getManager().setOverlay(over);
-        this.getOriginalImage().getManager().setOverlay(over);
+        this.getEditor().getCurrentImage().getManager().setOverlay(over);
+        this.getEditor().getCurrentOriginalImage().getManager().setOverlay(over);
         this.refreshRoiGUI();
     }
 
@@ -530,41 +530,44 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
     }
 
     private void deleteRoi(DeleteRoiEvent dialogEvent) {
-        this.getImage().getManager().select(dialogEvent.getRoiIndex());
-        this.getImage().getManager().runCommand(DELETE_COMMAND);
-        this.getOriginalImage().getManager().select(dialogEvent.getRoiIndex());
-        this.getOriginalImage().getManager().runCommand(DELETE_COMMAND);
+        this.getEditor().getCurrentImage().getManager().select(dialogEvent.getRoiIndex());
+        this.getEditor().getCurrentImage().getManager().runCommand(DELETE_COMMAND);
+        this.getEditor().getCurrentOriginalImage().getManager().select(dialogEvent.getRoiIndex());
+        this.getEditor().getCurrentOriginalImage().getManager().runCommand(DELETE_COMMAND);
         this.refreshRoiGUI();
     }
 
     private void deleteRois(DeleteRoisEvent dialogEvent) {
         int[] rois = dialogEvent.getRois();
         IntStream.range(0, rois.length).map(i -> rois[rois.length - 1 - i]).forEachOrdered(roi -> {
-            this.getImage().getManager().select(roi);
-            this.getImage().getManager().runCommand(DELETE_COMMAND);
-            this.getOriginalImage().getManager().select(roi);
-            this.getOriginalImage().getManager().runCommand(DELETE_COMMAND);
+            this.getEditor().getCurrentImage().getManager().select(roi);
+            this.getEditor().getCurrentImage().getManager().runCommand(DELETE_COMMAND);
+            this.getEditor().getCurrentOriginalImage().getManager().select(roi);
+            this.getEditor().getCurrentOriginalImage().getManager().runCommand(DELETE_COMMAND);
             this.refreshRoiGUI();
         });
     }
 
     private void getChangeImageThread(ChangeImageEvent dialogEvent) {
-        if (this.getImage() != null) {
-            this.getImage().removeMouseListeners();
+        if (this.getEditor().getCurrentImage() != null) {
+            this.getMainDialog().removeMouseListeners();
         }
-        boolean isNext = dialogEvent.getChangeDirection() == ChangeImageEvent.ChangeDirection.NEXT && !this.getManager().hasNext();
-        boolean isPrevious = dialogEvent.getChangeDirection() == ChangeImageEvent.ChangeDirection.PREV && !this.getManager().hasPrevious();
+        boolean isNext = dialogEvent.getChangeDirection() == ChangeImageEvent.ChangeDirection.NEXT && !this.getEditor().hasNext();
+        boolean isPrevious = dialogEvent.getChangeDirection() == ChangeImageEvent.ChangeDirection.PREV && !this.getEditor().hasPrevious();
         if (isNext || isPrevious) {
             this.getLoadingDialog().hideDialog();
         }
-        this.image = dialogEvent.getChangeDirection() == ChangeImageEvent.ChangeDirection.NEXT ? this.getManager().next() : this.getManager().previous();
-        this.originalImage = this.getManager().getOriginal(this.getManager().getCurrentIndex(), false);
-        if (this.getImage() != null) {
-            this.getMainDialog().changeImage(this.getImage());
-            this.getMainDialog().setPrevImageButtonEnabled(this.getManager().hasPrevious());
-            this.getMainDialog().setNextImageButtonEnabled(this.getManager().hasNext());
-            this.getMainDialog().setTitle(MessageFormat.format(MAIN_DIALOG_TITLE_PATTERN, this.getManager().getCurrentIndex() + 1, this.getManager().getNImages()));
-            this.getImage().buildMouseListener();
+        if (dialogEvent.getChangeDirection() == ChangeImageEvent.ChangeDirection.NEXT) {
+            this.getEditor().next();
+        } else {
+            this.getEditor().previous();
+        }
+        if (this.getEditor().getCurrentImage() != null) {
+            this.getMainDialog().changeImage(this.getEditor().getCurrentImage());
+            this.getMainDialog().setPrevImageButtonEnabled(this.getEditor().hasPrevious());
+            this.getMainDialog().setNextImageButtonEnabled(this.getEditor().hasNext());
+            this.getMainDialog().setTitle(MessageFormat.format(MAIN_DIALOG_TITLE_PATTERN, this.getEditor().getCurrentPosition() + 1, this.getEditor().getAllImagesCounterSum()));
+            // this.getEditor().getCurrentImage()().buildMouseListener();
             this.getLoadingDialog().hideDialog();
             this.refreshRoiGUI();
             this.getLoadingDialog().showDialog();
@@ -580,7 +583,7 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
             }
             try {
                 this.getLoadingDialog().showDialog();
-                this.previewDialog = new PreviewDialog(this.getManager().get(this.getManager().getCurrentIndex()), this, this.getManager().getCurrentIndex(), this.getManager().getNImages(), "Preview Image " + (this.getManager().getCurrentIndex() + 1) + "/" + this.getManager().getNImages());
+                this.previewDialog = new PreviewDialog(this.getEditor().getCurrentImage(), this, this.getEditor().getCurrentPosition(), this.getEditor().getAllImagesCounterSum(), "Preview Image " + (this.getEditor().getCurrentPosition() + 1) + "/" + this.getEditor().getAllImagesCounterSum());
             } catch (Exception e) {
                 IJ.showMessage(e.getMessage());
             }
@@ -596,9 +599,9 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
         if (dialogEvent instanceof ds4h.dialog.preview.event.ChangeImageEvent) {
             ds4h.dialog.preview.event.ChangeImageEvent event = (ds4h.dialog.preview.event.ChangeImageEvent) dialogEvent;
             new Thread(() -> {
-                WindowManager.setCurrentWindow(this.getImage().getWindow());
-                BufferedImage previewImage = this.getManager().get(event.getIndex());
-                this.getPreviewDialog().changeImage(previewImage, "Preview Image " + (event.getIndex() + 1) + "/" + this.getManager().getNImages());
+                WindowManager.setCurrentWindow(this.getEditor().getCurrentImage().getWindow());
+                SlideImage previewSlideImage = this.getEditor().getSlideImage(event.getIndex());
+                this.getPreviewDialog().changeImage(previewSlideImage, "Preview Image " + (event.getIndex() + 1) + "/" + this.getEditor().getAllImagesCounterSum());
                 this.getLoadingDialog().hideDialog();
             }).start();
             this.getLoadingDialog().showDialog();
@@ -635,7 +638,7 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
         if (removeEvent instanceof RemoveImageEvent) {
             int imageFileIndex = ((RemoveImageEvent) removeEvent).getImageFileIndex();
             // only an image is available: if user remove this image we need to ask him to choose another one!
-            if (this.manager.getImageFiles().size() == 1) {
+            if (this.editor.getImageFiles().size() == 1) {
                 String[] buttons = {"Yes", "No"};
                 int answer = JOptionPane.showOptionDialog(null, DELETE_ALL_IMAGES, CAREFUL_NOW_TITLE, JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE, null, buttons, buttons[1]);
                 if (answer == 0) {
@@ -646,26 +649,24 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
             } else {
                 // remove the image selected
                 this.getRemoveImageDialog().removeImageFile(imageFileIndex);
-                this.getManager().removeImageFile(imageFileIndex);
-                this.getManager().removeOriginalImageFile(imageFileIndex);
+                this.getEditor().removeImageFile(imageFileIndex);
+                this.getEditor().removeOriginalImageFile(imageFileIndex);
             }
-            this.image = this.getManager().get(this.getManager().getCurrentIndex());
-            this.originalImage = this.getManager().get(this.getManager().getCurrentIndex());
-            this.getMainDialog().changeImage(this.image);
-            int finalIndex = this.getManager().getCurrentIndex();
+            this.getMainDialog().changeImage(this.getEditor().getCurrentImage());
+            int finalIndex = this.getEditor().getCurrentPosition();
             if (finalIndex < 0) {
                 finalIndex = 0;
             }
-            if (this.getManager().getNImages() == 1) {
+            if (this.getEditor().getAllImagesCounterSum() == 1) {
                 this.getMainDialog().setAutoAlignButtonEnabled(false);
             }
             finalIndex = finalIndex + 1;
-            if (this.getManager().getNImages() < finalIndex && this.getManager().getCurrentIndex() == this.getManager().getNImages()) {
-                finalIndex = this.getManager().getNImages();
+            if (this.getEditor().getAllImagesCounterSum() < finalIndex && this.getEditor().getCurrentPosition() == this.getEditor().getAllImagesCounterSum()) {
+                finalIndex = this.getEditor().getAllImagesCounterSum();
             }
-            this.getMainDialog().setPrevImageButtonEnabled(finalIndex > 1 && this.getManager().getCurrentIndex() != 0);
-            this.getMainDialog().setNextImageButtonEnabled(getManager().hasNext());
-            this.getMainDialog().setTitle(MessageFormat.format(MAIN_DIALOG_TITLE_PATTERN, finalIndex, this.getManager().getNImages()));
+            this.getMainDialog().setPrevImageButtonEnabled(finalIndex > 1 && this.getEditor().getCurrentPosition() != 0);
+            this.getMainDialog().setNextImageButtonEnabled(getEditor().hasNext());
+            this.getMainDialog().setTitle(MessageFormat.format(MAIN_DIALOG_TITLE_PATTERN, finalIndex, this.getEditor().getAllImagesCounterSum()));
             this.refreshRoiGUI();
             this.getRemoveImageDialog().dispose();
         }
@@ -675,16 +676,17 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
      * Refresh all the Roi-based guis in the MainDialog
      */
     private void refreshRoiGUI() {
-        this.getMainDialog().drawRois(this.getImage().getManager());
+        this.getMainDialog().drawRois(this.getEditor().getCurrentImage().getManager());
         if (this.getPreviewDialog() != null && this.getPreviewDialog().isVisible()) {
             this.getPreviewDialog().drawRois();
         }
-        // Get the number of rois added in each this.getImage(). If they are all the same (and at least one is added), we can enable the "align" functionality
-        List<Integer> roisNumber = this.getManager().getRoiManagers().stream().map(roiManager -> roiManager.getRoisAsArray().length).collect(Collectors.toList());
-        boolean alignButtonEnabled = roisNumber.get(0) >= LeastSquareImageTransformation.MINIMUM_ROI_NUMBER && this.getManager().getNImages() > 1 && roisNumber.stream().distinct().count() == 1;
+        List<RoiManager> roiManagers = this.getEditor().getImageFiles().stream().flatMap(imageFile -> imageFile.getImages().stream()).map(SlideImage::getManager).collect(Collectors.toList());
+        // Get the number of rois added in each this.getEditor().getCurrentImage()(). If they are all the same (and at least one is added), we can enable the "align" functionality
+        List<Integer> roisNumber = roiManagers.stream().map(roiManager -> roiManager.getRoisAsArray().length).collect(Collectors.toList());
+        boolean alignButtonEnabled = roisNumber.get(0) >= LeastSquareImageTransformation.MINIMUM_ROI_NUMBER && this.getEditor().getAllImagesCounterSum() > 1 && roisNumber.stream().distinct().count() == 1;
         // check if: the number of images is more than 1, ALL the images has the same number of rois added and the ROI numbers are more than 3
         this.getMainDialog().setAlignButtonEnabled(alignButtonEnabled);
-        boolean copyCornersEnabled = this.getManager().getRoiManagers().stream().filter(roiManager -> roiManager.getRoisAsArray().length != 0).map(roiManager -> this.getManager().getRoiManagers().indexOf(roiManager)).anyMatch(index -> index != this.getManager().getCurrentIndex());
+        boolean copyCornersEnabled = roiManagers.stream().filter(roiManager -> roiManager.getRoisAsArray().length != 0).anyMatch(roiManager -> roiManager != this.getEditor().getCurrentImage().getManager());
         this.getMainDialog().setCopyCornersEnabled(copyCornersEnabled);
     }
 
@@ -707,20 +709,20 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
             for (String filePath : filePaths) {
                 this.showIfMemoryIsInsufficient(filePath);
             }
-            this.manager = new ImagesManager(filePaths);
-            this.image = this.getManager().next();
-            this.originalImage = this.getManager().getOriginal(this.getManager().getCurrentIndex(), false);
-            this.mainDialog = new MainDialog(this.image, this);
-            this.getMainDialog().setPrevImageButtonEnabled(this.getManager().hasPrevious());
-            this.getMainDialog().setNextImageButtonEnabled(this.getManager().hasNext());
-            this.getMainDialog().setTitle(MessageFormat.format(MAIN_DIALOG_TITLE_PATTERN, this.getManager().getCurrentIndex() + 1, this.getManager().getNImages()));
-            this.getMainDialog().setAutoAlignButtonEnabled(this.getManager().getNImages() > 1);
+            this.editor = new ImagesEditor(filePaths);
+            this.editor.addPropertyChangeListener(this);
+            this.getEditor().next();
+            this.mainDialog = new MainDialog(this.getEditor().getCurrentImage(), this);
+            this.getMainDialog().setPrevImageButtonEnabled(this.getEditor().hasPrevious());
+            this.getMainDialog().setNextImageButtonEnabled(this.getEditor().hasNext());
+            this.getMainDialog().setTitle(MessageFormat.format(MAIN_DIALOG_TITLE_PATTERN, this.getEditor().getCurrentPosition() + 1, this.getEditor().getAllImagesCounterSum()));
+            this.getMainDialog().setAutoAlignButtonEnabled(this.getEditor().getAllImagesCounterSum() > 1);
             this.getLoadingDialog().hideDialog();
-            if (this.getImage().isReduced())
+            if (this.getEditor().getCurrentImage().isReduced())
                 JOptionPane.showMessageDialog(null, IMAGES_SCALED_MESSAGE, "Info", JOptionPane.INFORMATION_MESSAGE);
-            if (this.getManager().getNImages() == 1)
+            if (this.getEditor().getAllImagesCounterSum() == 1)
                 JOptionPane.showMessageDialog(null, SINGLE_IMAGE_MESSAGE, "Warning", JOptionPane.WARNING_MESSAGE);
-        } catch (ImagesManager.ImageOversizeException e) {
+        } catch (ImagesEditor.ImageOversizeException e) {
             JOptionPane.showMessageDialog(null, IMAGES_OVERSIZE_MESSAGE);
         } catch (UnknownFormatException | EnumException e) {
             JOptionPane.showMessageDialog(null, UNKNOWN_FORMAT_MESSAGE, UNKNOWN_FORMAT_TITLE, JOptionPane.ERROR_MESSAGE);
@@ -750,7 +752,7 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
         if (this.getPreviewDialog() != null) this.getPreviewDialog().dispose();
         if (this.getAlignDialog() != null) this.getAlignDialog().dispose();
         if (this.getRemoveImageDialog() != null) this.getRemoveImageDialog().dispose();
-        this.getManager().dispose();
+        this.getEditor().dispose();
         this.totalMemory = 0;
     }
 
@@ -764,8 +766,8 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
         this.initialize(filePaths);
     }
 
-    private ImagesManager getManager() {
-        return this.manager;
+    private ImagesEditor getEditor() {
+        return this.editor;
     }
 
     private LoadingDialog getLoadingDialog() {
@@ -788,13 +790,6 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
         return this.mainDialog;
     }
 
-    private BufferedImage getImage() {
-        return this.image;
-    }
-
-    private BufferedImage getOriginalImage() {
-        return this.originalImage;
-    }
 
     private long getTotalMemory() {
         return this.totalMemory;

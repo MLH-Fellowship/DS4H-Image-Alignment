@@ -13,7 +13,7 @@ import ds4h.dialog.align.AlignDialog;
 import ds4h.dialog.align.OnAlignDialogEventListener;
 import ds4h.dialog.loading.LoadingDialog;
 import ds4h.dialog.main.event.RegistrationEvent;
-import ds4h.image.manager.ImagesManager;
+import ds4h.image.model.manager.ImagesEditor;
 import ij.IJ;
 import ij.ImagePlus;
 import ij.VirtualStack;
@@ -36,7 +36,7 @@ public abstract class AbstractBuilder<T> implements AlignBuilder {
     protected static final String IMAGE_SIZE_TOO_BIG_TITLE = "Error: image size too big";
     private final LoadingDialog loadingDialog;
     private final OnAlignDialogEventListener listener;
-    private final ImagesManager manager;
+    private final ImagesEditor editor;
     private final RegistrationEvent event;
 
     private AlignDialog alignDialog;
@@ -56,12 +56,14 @@ public abstract class AbstractBuilder<T> implements AlignBuilder {
     private int sourceImageIndex = -1;
 
 
-    protected AbstractBuilder(LoadingDialog loadingDialog, OnAlignDialogEventListener listener, ImagesManager manager, RegistrationEvent event) {
+    protected AbstractBuilder(LoadingDialog loadingDialog, OnAlignDialogEventListener listener, ImagesEditor editor, RegistrationEvent event) {
         this.loadingDialog = loadingDialog;
         this.listener = listener;
-        this.manager = manager;
+        this.editor = editor;
         this.event = event;
-        this.imagesDimensions = new ArrayList<>(manager.getImagesDimensions());
+        this.imagesDimensions = new ArrayList<>(editor.getImagesDimensions());
+        editor.loadImagesWholeSlides();
+        editor.loadOriginalImagesWholeSlides();
     }
 
     public abstract void init();
@@ -146,8 +148,8 @@ public abstract class AbstractBuilder<T> implements AlignBuilder {
         return this.listener;
     }
 
-    protected ImagesManager getManager() {
-        return this.manager;
+    protected ImagesEditor getEditor() {
+        return this.editor;
     }
 
     protected VirtualStack getVirtualStack() {

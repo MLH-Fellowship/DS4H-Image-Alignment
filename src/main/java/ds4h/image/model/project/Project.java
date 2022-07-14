@@ -1,4 +1,4 @@
-package ds4h.image.model;
+package ds4h.image.model.project;
 
 import java.io.Serializable;
 import java.util.List;

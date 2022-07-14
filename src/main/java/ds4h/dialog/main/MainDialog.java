@@ -1,8 +1,9 @@
 package ds4h.dialog.main;
 
 import ds4h.dialog.main.event.*;
-import ds4h.image.buffered.BufferedImage;
-import ds4h.image.buffered.event.RoiSelectedEvent;
+import ds4h.dialog.main.listener.MouseListener;
+import ds4h.image.model.manager.slide.SlideImage;
+import ds4h.image.model.manager.slide.event.RoiSelectedEvent;
 import ds4h.services.FileService;
 import ds4h.utils.Pair;
 import ij.IJ;
@@ -32,7 +33,6 @@ import static javax.swing.SwingConstants.LEFT;
 public class MainDialog extends ImageWindow {
     private static final String DIALOG_STATIC_TITLE = "DS4H Image Alignment.";
     private static final String SCALE_OPTION = "scale";
-    public static BufferedImage currentImage = null; // Use a singleton instead or rethink the data flow
     private final OnMainDialogEventListener eventListener;
 
     private final JButton btnCopyCorners = new JButton("COPY CORNERS");
@@ -43,9 +43,10 @@ public class MainDialog extends ImageWindow {
     private final JButton btnDeleteRoi = new JButton("DELETE CORNER");
     private final JButton btnPrevImage = new JButton("PREV IMAGE");
     private final JButton btnNextImage = new JButton("NEXT IMAGE");
+
+    private final MouseListener mouseListener;
     private final DefaultListModel<String> jListRoisModel = new DefaultListModel<>();
     public JList<String> jListRois;
-    private BufferedImage image;
     private boolean mouseOverCanvas;
     private Rectangle oldRect = null;
     private Rectangle2D.Double lastBound;
@@ -57,10 +58,10 @@ public class MainDialog extends ImageWindow {
      */
     private boolean titleHasToChange = true;
 
-    public MainDialog(BufferedImage plus, OnMainDialogEventListener listener) {
+    public MainDialog(SlideImage plus, OnMainDialogEventListener listener) {
         super(plus, new CustomCanvas(plus));
-        this.image = plus;
         this.eventListener = listener;
+        this.mouseListener = new MouseListener(this);
         final CustomCanvas canvas = (CustomCanvas) getCanvas();
         // Remove the canvas from the window, to add it later
         this.removeAll();
@@ -154,7 +155,7 @@ public class MainDialog extends ImageWindow {
         manager.addKeyEventDispatcher(new KeyboardEventDispatcher());
         this.listenerROI();
         this.handleCanvasMouseListeners(canvas);
-        MainDialog.currentImage = image;
+
         this.addEventListenerToImage();
         WindowManager.getCurrentWindow().getCanvas().fitToWindow();
         this.pack();
@@ -371,12 +372,12 @@ public class MainDialog extends ImageWindow {
         final JMenuItem addToCurrentStackItem = new JMenuItem("Add images to current stack");
         addToCurrentStackItem.addActionListener(e -> FileService.promptForFiles().forEach(path -> this.eventListener.onMainDialogEvent(new AddFileEvent(path))));
         fileMenu.add(addToCurrentStackItem);
-        final JMenuItem removeImageItem = new JMenuItem("Remove image...");
+        final JMenuItem removeImageItem = new JMenuItem("Remove image");
         removeImageItem.addActionListener(e -> this.eventListener.onMainDialogEvent(new RemoveImageEvent()));
         fileMenu.add(removeImageItem);
         fileMenu.addSeparator();
         final JMenu aboutMenu = new JMenu("?");
-        final JMenuItem aboutItem = new JMenuItem("About...");
+        final JMenuItem aboutItem = new JMenuItem("About");
         aboutItem.addActionListener(e -> this.eventListener.onMainDialogEvent(new OpenAboutEvent()));
         aboutMenu.add(aboutItem);
         JMenuBar menuBar = new JMenuBar();
@@ -387,13 +388,17 @@ public class MainDialog extends ImageWindow {
         return menuPanel;
     }
 
+    public SlideImage getCurrentImage() {
+        return (SlideImage) this.getImagePlus();
+    }
+
     private void handleOutOfBoundsRois() {
-        final Roi[] roisAsArray = this.image.getManager().getRoisAsArray();
+        final Roi[] roisAsArray = this.getCurrentImage().getManager().getRoisAsArray();
         final List<Integer> roisToDelete = new ArrayList<>();
-        for (int index = 0; index < this.image.getManager().getRoisAsArray().length; index++) {
+        for (int index = 0; index < this.getCurrentImage().getManager().getRoisAsArray().length; index++) {
             final Roi roi = roisAsArray[index];
             Rectangle2D.Double bounds = roi.getFloatBounds();
-            if (bounds.getX() < image.getWidth() && bounds.getY() < image.getHeight()) {
+            if (bounds.getX() < this.getCurrentImage().getWidth() && bounds.getY() < this.getCurrentImage().getHeight()) {
                 continue;
             }
             roisToDelete.add(index);
@@ -420,7 +425,7 @@ public class MainDialog extends ImageWindow {
                 // FIND THE ROI THAT HAS BEEN CLICKED DIRECTLY
                 final Roi selectedRoi = imagePlus.getRoi();
                 final Rectangle2D.Double bounds = selectedRoi.getFloatBounds();
-                Roi[] roisAsArray = this.image.getManager().getRoisAsArray();
+                Roi[] roisAsArray = this.getCurrentImage().getManager().getRoisAsArray();
                 if (isNotTheSameRoi(selectedRoi)) {
                     this.lastBound = null;
                 }
@@ -460,38 +465,21 @@ public class MainDialog extends ImageWindow {
     /**
      * Change the actual image displayed in the main view, based on the given BufferedImage instance
      *
-     * @param image
+     * @param slideImage
      */
-    public void changeImage(BufferedImage image) {
-        if (image != null) {
-            MainDialog.currentImage = image;
-            this.setImage(image);
-            image.backupRois();
-            image.getManager().reset();
-            this.image = image;
-            this.btnDeleteRoi.setEnabled(jListRois.getSelectedIndices().length != 0);
-            this.image.restoreRois();
-            WindowManager.getCurrentWindow().getCanvas().fitToWindow();
-            this.drawRois(image.getManager());
-            this.addEventListenerToImage();
-            IJ.selectWindow(this.getImagePlus().getID());
-            this.pack();
-        }
-    }
-
-    /**
-     * Adds an event listener to the current image
-     */
-    private void addEventListenerToImage() {
-        MainDialog root = this;
-        this.image.addEventListener(event -> {
-            if (event instanceof RoiSelectedEvent) {
-                // if a roi is marked as selected, select the appropriate ROI in the listbox in the left of the window
-                RoiSelectedEvent roiSelectedEvent = (RoiSelectedEvent) event;
-                int index = Arrays.asList(root.image.getManager().getRoisAsArray()).indexOf(roiSelectedEvent.getRoiSelected());
-                this.eventListener.onMainDialogEvent(new SelectedRoiFromOvalEvent(index));
-            }
-        });
+    public void changeImage(SlideImage slideImage) {
+        if (slideImage == null) return;
+        this.setImage(slideImage);
+        slideImage.backupRois();
+        slideImage.getManager().reset();
+        this.setImage(slideImage);
+        this.btnDeleteRoi.setEnabled(jListRois.getSelectedIndices().length != 0);
+        this.getCurrentImage().restoreRois();
+        WindowManager.getCurrentWindow().getCanvas().fitToWindow();
+        this.drawRois(slideImage.getManager());
+        this.addEventListenerToImage();
+        IJ.selectWindow(this.getImagePlus().getID());
+        this.pack();
     }
 
     /**
@@ -504,7 +492,7 @@ public class MainDialog extends ImageWindow {
     public void drawRois(RoiManager manager) {
         Prefs.useNamesAsLabels = true;
         Prefs.noPointLabels = false;
-        int strokeWidth = Math.max((int) (this.image.getWidth() * 0.0025), 30);
+        int strokeWidth = Math.max((int) (this.getCurrentImage().getWidth() * 0.0025), 30);
         Overlay over = new Overlay();
         over.drawBackgrounds(false);
         over.drawLabels(false);
@@ -513,16 +501,16 @@ public class MainDialog extends ImageWindow {
         over.setLabelColor(Color.CYAN);
         over.setStrokeWidth((double) strokeWidth);
         over.setStrokeColor(Color.CYAN);
-        Arrays.stream(this.image.getManager().getRoisAsArray()).forEach(over::add);
+        Arrays.stream(this.getCurrentImage().getManager().getRoisAsArray()).forEach(over::add);
         this.renameRois();
-        this.image.getManager().setOverlay(over);
+        this.getCurrentImage().getManager().setOverlay(over);
         this.refreshROIList(manager);
         this.btnDeleteRoi.setEnabled(this.jListRois.getSelectedIndices().length != 0);
     }
 
     private void renameRois() {
-        for (int index = 0; index < this.image.getManager().getRoisAsArray().length; index++) {
-            this.image.getManager().rename(index, String.valueOf(index + 1));
+        for (int index = 0; index < this.getCurrentImage().getManager().getRoisAsArray().length; index++) {
+            this.getCurrentImage().getManager().rename(index, String.valueOf(index + 1));
         }
     }
 
@@ -581,6 +569,33 @@ public class MainDialog extends ImageWindow {
             super.setTitle(DIALOG_STATIC_TITLE + " " + title);
         }
     }
+
+    public void addMouseListener() {
+        this.getCanvas().addMouseListener(getMouseListener());
+    }
+
+    public MouseListener getMouseListener() {
+        return mouseListener;
+    }
+
+    public void removeMouseListeners() {
+        Arrays.stream(this.getCanvas().getMouseListeners()).forEachOrdered(it -> this.getCanvas().removeMouseListener(getMouseListener()));
+    }
+
+    /**
+     * Adds an event listener to the current image
+     */
+    private void addEventListenerToImage() {
+        getCurrentImage().setListener(event -> {
+            if (event instanceof RoiSelectedEvent) {
+                // if a roi is marked as selected, select the appropriate ROI in the listbox in the left of the window
+                RoiSelectedEvent roiSelectedEvent = (RoiSelectedEvent) event;
+                int index = Arrays.asList(getCurrentImage().getManager().getRoisAsArray()).indexOf(roiSelectedEvent.getRoiSelected());
+                this.eventListener.onMainDialogEvent(new SelectedRoiFromOvalEvent(index));
+            }
+        });
+    }
+
 
     private class KeyboardEventDispatcher implements KeyEventDispatcher {
         @Override

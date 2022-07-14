@@ -3,7 +3,7 @@ package ds4h.dialog.preview;
 import ds4h.dialog.main.CustomCanvas;
 import ds4h.dialog.preview.event.ChangeImageEvent;
 import ds4h.dialog.preview.event.CloseDialogEvent;
-import ds4h.image.buffered.BufferedImage;
+import ds4h.image.model.manager.slide.SlideImage;
 import ij.IJ;
 import ij.WindowManager;
 import ij.gui.ImageWindow;
@@ -18,11 +18,11 @@ import java.util.Arrays;
 
 public class PreviewDialog extends ImageWindow {
   private OnPreviewDialogEventListener listener;
-  private BufferedImage currentImage;
+  private SlideImage currentSlideImage;
   
-  public PreviewDialog(BufferedImage startingImage, OnPreviewDialogEventListener listener, int scrollbarStartingValue, int scrollbarMaximum, String title) {
-    super(startingImage, new CustomCanvas(startingImage));
-    this.currentImage = startingImage;
+  public PreviewDialog(SlideImage startingSlideImage, OnPreviewDialogEventListener listener, int scrollbarStartingValue, int scrollbarMaximum, String title) {
+    super(startingSlideImage, new CustomCanvas(startingSlideImage));
+    this.currentSlideImage = startingSlideImage;
     this.setTitle(title);
     final CustomCanvas canvas = (CustomCanvas) getCanvas();
     final GridBagLayout layout = new GridBagLayout();
@@ -83,9 +83,9 @@ public class PreviewDialog extends ImageWindow {
     this.pack();
   }
   
-  public void changeImage(BufferedImage image, String title) {
-    this.setImage(image);
-    this.currentImage = image;
+  public void changeImage(SlideImage slideImage, String title) {
+    this.setImage(slideImage);
+    this.currentSlideImage = slideImage;
     this.drawRois();
     // The zoom scaling command works on the current active window: to be 100% sure it will work, we need to forcefully select the preview window.
     IJ.selectWindow(this.getImagePlus().getID());
@@ -101,8 +101,8 @@ public class PreviewDialog extends ImageWindow {
     over.drawNames(true);
     over.setLabelColor(Color.CYAN);
     over.setStrokeColor(Color.CYAN);
-    int strokeWidth = Math.max((int) (this.currentImage.getWidth() * 0.0025), 3);
-    Arrays.stream(this.currentImage.getManager().getRoisAsArray()).forEach(over::add);
+    int strokeWidth = Math.max((int) (this.currentSlideImage.getWidth() * 0.0025), 3);
+    Arrays.stream(this.currentSlideImage.getManager().getRoisAsArray()).forEach(over::add);
     over.setLabelFontSize(Math.round(strokeWidth * 1f), "scale");
     over.setStrokeWidth((double) strokeWidth);
     this.getImagePlus().setOverlay(over);

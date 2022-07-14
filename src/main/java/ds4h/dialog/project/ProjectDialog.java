@@ -1,7 +1,7 @@
 package ds4h.dialog.project;
 
-import ds4h.image.model.Project;
-import ds4h.image.model.ProjectImage;
+import ds4h.image.model.project.Project;
+import ds4h.image.model.project.ProjectImage;
 import ds4h.image.registration.ImageAlignment;
 import ds4h.services.ProjectService;
 

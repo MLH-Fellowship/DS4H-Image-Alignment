@@ -1,8 +1,8 @@
 package ds4h.services;
 
-import ds4h.image.model.Project;
-import ds4h.image.model.ProjectImage;
-import ds4h.image.model.ProjectImageRoi;
+import ds4h.image.model.project.Project;
+import ds4h.image.model.project.ProjectImage;
+import ds4h.image.model.project.ProjectImageRoi;
 import ds4h.utils.Pair;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;

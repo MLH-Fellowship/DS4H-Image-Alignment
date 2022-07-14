@@ -1,7 +1,7 @@
 package ds4h.image.registration;
 
 import ds4h.dialog.align.setting.SettingEvent;
-import ds4h.image.buffered.BufferedImage;
+import ds4h.image.model.manager.slide.SlideImage;
 import ij.IJ;
 import ij.ImagePlus;
 import ij.process.ImageProcessor;
@@ -23,7 +23,7 @@ public class LeastSquareImageTransformation {
     /**
      * Performs the least square transformation between two BufferedImages with a series of fixed parameters.
      */
-    public static ImagePlus transform(BufferedImage sourceOriginal, BufferedImage source, BufferedImage templateOriginal, BufferedImage template, SettingEvent event) {
+    public static ImagePlus transform(SlideImage sourceOriginal, SlideImage source, SlideImage templateOriginal, SlideImage template, SettingEvent event) {
         Mapping<?> mapping;
         final MovingLeastSquaresTransform t = new MovingLeastSquaresTransform();
         try {
@@ -70,8 +70,8 @@ public class LeastSquareImageTransformation {
         return model;
     }
 
-    private static List<Point> getPoints(BufferedImage image) {
-        return Arrays.stream(image.getManager().getRoisAsArray()).map(roi -> {
+    private static List<Point> getPoints(SlideImage slideImage) {
+        return Arrays.stream(slideImage.getManager().getRoisAsArray()).map(roi -> {
             double oldX = roi.getRotationCenter().xpoints[0];
             double oldY = roi.getRotationCenter().ypoints[0];
             return new Point(new double[]{oldX, oldY});

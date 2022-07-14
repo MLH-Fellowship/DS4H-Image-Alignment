@@ -1,13 +1,13 @@
 package ds4h.dialog.preview;
 
 import ds4h.dialog.main.CustomCanvas;
-import ds4h.dialog.preview.event.ChangeImageEvent;
+import ds4h.dialog.preview.event.ChangeImagePreviewEvent;
 import ds4h.dialog.preview.event.CloseDialogEvent;
 import ds4h.image.model.manager.slide.SlideImage;
 import ij.IJ;
-import ij.WindowManager;
 import ij.gui.ImageWindow;
 import ij.gui.Overlay;
+import ij.plugin.Zoom;
 
 import javax.swing.*;
 import java.awt.*;
@@ -18,11 +18,10 @@ import java.util.Arrays;
 
 public class PreviewDialog extends ImageWindow {
   private OnPreviewDialogEventListener listener;
-  private SlideImage currentSlideImage;
   
   public PreviewDialog(SlideImage startingSlideImage, OnPreviewDialogEventListener listener, int scrollbarStartingValue, int scrollbarMaximum, String title) {
     super(startingSlideImage, new CustomCanvas(startingSlideImage));
-    this.currentSlideImage = startingSlideImage;
+    this.setImage(startingSlideImage);
     this.setTitle(title);
     final CustomCanvas canvas = (CustomCanvas) getCanvas();
     final GridBagLayout layout = new GridBagLayout();
@@ -41,7 +40,13 @@ public class PreviewDialog extends ImageWindow {
     all.setLayout(layout);
     JScrollBar scrollbar = new JScrollBar(Adjustable.HORIZONTAL, scrollbarStartingValue, 1, 0, scrollbarMaximum);
     scrollbar.setBlockIncrement(1);
-    allConstraints.gridy++;
+    allConstraints.gridx = 0;
+    allConstraints.gridy = 1;
+    allConstraints.fill = GridBagConstraints.BOTH;
+    allConstraints.gridwidth = 1;
+    allConstraints.gridheight = 1;
+    allConstraints.weightx = 1;
+    allConstraints.weighty = 1;
     all.add(scrollbar, allConstraints);
     final GridBagLayout wingb = new GridBagLayout();
     final GridBagConstraints winc = new GridBagConstraints();
@@ -75,21 +80,20 @@ public class PreviewDialog extends ImageWindow {
     });
     scrollbar.addAdjustmentListener(e -> {
       scrollbar.updateUI();
-      this.listener.onPreviewDialogEvent(new ChangeImageEvent(scrollbar.getValue()));
+      this.listener.onPreviewDialogEvent(new ChangeImagePreviewEvent(scrollbar.getValue()));
     });
     this.setResizable(false);
     this.listener = listener;
-    WindowManager.getCurrentImage().getCanvas().fitToWindow();
+    new Zoom().run("scale");
     this.pack();
   }
   
   public void changeImage(SlideImage slideImage, String title) {
     this.setImage(slideImage);
-    this.currentSlideImage = slideImage;
     this.drawRois();
     // The zoom scaling command works on the current active window: to be 100% sure it will work, we need to forcefully select the preview window.
     IJ.selectWindow(this.getImagePlus().getID());
-    WindowManager.getCurrentImage().getCanvas().fitToWindow();
+    new Zoom().run("scale");
     this.setTitle(title);
     this.pack();
   }
@@ -101,10 +105,14 @@ public class PreviewDialog extends ImageWindow {
     over.drawNames(true);
     over.setLabelColor(Color.CYAN);
     over.setStrokeColor(Color.CYAN);
-    int strokeWidth = Math.max((int) (this.currentSlideImage.getWidth() * 0.0025), 3);
-    Arrays.stream(this.currentSlideImage.getManager().getRoisAsArray()).forEach(over::add);
+    int strokeWidth = Math.max((int) (this.getCurrentImage().getWidth() * 0.0025), 3);
+    Arrays.stream(this.getCurrentImage().getManager().getRoisAsArray()).forEach(over::add);
     over.setLabelFontSize(Math.round(strokeWidth * 1f), "scale");
     over.setStrokeWidth((double) strokeWidth);
     this.getImagePlus().setOverlay(over);
+  }
+
+  private SlideImage getCurrentImage() {
+    return (SlideImage) this.getImagePlus();
   }
 }

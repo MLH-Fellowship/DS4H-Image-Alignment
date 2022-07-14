@@ -25,6 +25,7 @@ import ds4h.dialog.main.OnMainDialogEventListener;
 import ds4h.dialog.main.event.*;
 import ds4h.dialog.preview.OnPreviewDialogEventListener;
 import ds4h.dialog.preview.PreviewDialog;
+import ds4h.dialog.preview.event.ChangeImagePreviewEvent;
 import ds4h.dialog.preview.event.CloseDialogEvent;
 import ds4h.dialog.preview.event.IPreviewDialogEvent;
 import ds4h.dialog.remove.OnRemoveDialogEventListener;
@@ -550,7 +551,7 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
 
     private void getChangeImageThread(ChangeImageEvent dialogEvent) {
         if (this.getEditor().getCurrentImage() != null) {
-            this.getMainDialog().removeMouseListeners();
+            this.getMainDialog().removeMouseListener();
         }
         boolean isNext = dialogEvent.getChangeDirection() == ChangeImageEvent.ChangeDirection.NEXT && !this.getEditor().hasNext();
         boolean isPrevious = dialogEvent.getChangeDirection() == ChangeImageEvent.ChangeDirection.PREV && !this.getEditor().hasPrevious();
@@ -596,8 +597,8 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
 
     @Override
     public void onPreviewDialogEvent(IPreviewDialogEvent dialogEvent) {
-        if (dialogEvent instanceof ds4h.dialog.preview.event.ChangeImageEvent) {
-            ds4h.dialog.preview.event.ChangeImageEvent event = (ds4h.dialog.preview.event.ChangeImageEvent) dialogEvent;
+        if (dialogEvent instanceof ChangeImagePreviewEvent) {
+            ChangeImagePreviewEvent event = (ChangeImagePreviewEvent) dialogEvent;
             new Thread(() -> {
                 WindowManager.setCurrentWindow(this.getEditor().getCurrentImage().getWindow());
                 SlideImage previewSlideImage = this.getEditor().getSlideImage(event.getIndex());

@@ -157,6 +157,7 @@ public class MainDialog extends ImageWindow {
         this.handleCanvasMouseListeners(canvas);
 
         this.addEventListenerToImage();
+        this.addMouseListener();
         WindowManager.getCurrentWindow().getCanvas().fitToWindow();
         this.pack();
         this.setVisible(true);
@@ -470,9 +471,11 @@ public class MainDialog extends ImageWindow {
     public void changeImage(SlideImage slideImage) {
         if (slideImage == null) return;
         this.setImage(slideImage);
+        this.removeMouseListener();
         slideImage.backupRois();
         slideImage.getManager().reset();
         this.setImage(slideImage);
+        this.addMouseListener();
         this.btnDeleteRoi.setEnabled(jListRois.getSelectedIndices().length != 0);
         this.getCurrentImage().restoreRois();
         WindowManager.getCurrentWindow().getCanvas().fitToWindow();
@@ -578,8 +581,8 @@ public class MainDialog extends ImageWindow {
         return mouseListener;
     }
 
-    public void removeMouseListeners() {
-        Arrays.stream(this.getCanvas().getMouseListeners()).forEachOrdered(it -> this.getCanvas().removeMouseListener(getMouseListener()));
+    public void removeMouseListener() {
+        this.getCanvas().removeMouseListener(getMouseListener());
     }
 
     /**

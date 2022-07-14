@@ -106,7 +106,7 @@ public class LeastSquareTransformationBuilder extends AbstractBuilder<SlideImage
         this.setVirtualStack(new VirtualStack(sourceImg.getWidth(), sourceImg.getHeight(), ColorModel.getRGBdefault(), IJ.getDir(TEMP_PATH)));
         this.addToVirtualStack(sourceImg);
         for (int index = 1; index < this.getEditor().getAllImagesCounterSum(); index++) {
-            ImagePlus transformedImage = LeastSquareImageTransformation.transform(this.getEditor().getOriginalSlideImage(index), this.getEditor().getWholeSlideImage(index), sourceImgOriginal, sourceImg, this.getSettingDialog().getEvent());
+            ImagePlus transformedImage = LeastSquareImageTransformation.transform(this.getEditor().getOriginalWholeSlideImage(index), this.getEditor().getWholeSlideImage(index), sourceImgOriginal, sourceImg, this.getSettingDialog().getEvent());
             if (transformedImage != null) {
                 this.addToVirtualStack(transformedImage);
             }

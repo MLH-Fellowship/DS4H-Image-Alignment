@@ -201,7 +201,7 @@ public class ImagesEditor implements Observable {
             if (imageFile != null) {
                 final SlideImage image = imageFile.getImage(index - progressive, wholeSlide);
                 if (!isOriginal) {
-                    image.setTitle(MessageFormat.format("Editor Image {0}/{1}", this.getCurrentPosition(), this.getAllImagesCounterSum()));
+                    image.setTitle(MessageFormat.format("Editor Image {0}/{1}", index - progressive, this.getAllImagesCounterSum()));
                 }
                 return image;
             }

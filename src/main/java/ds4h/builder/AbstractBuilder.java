@@ -88,7 +88,7 @@ public abstract class AbstractBuilder<T> implements AlignBuilder {
         try {
             this.setTransformedImagesStack(new ImagePlus("", this.getVirtualStack()));
             String filePath = IJ.getDir(TEMP_PATH) + this.getTransformedImagesStack().hashCode() + TIFF_EXT;
-            new ImageConverter(this.getTransformedImagesStack()).convertToRGB();
+            new ImageConverter(this.getTransformedImagesStack()).convertToGray8();
             new FileSaver(this.getTransformedImagesStack()).saveAsTiff(filePath);
             this.getTempImages().add(filePath);
             this.getLoadingDialog().hideDialog();

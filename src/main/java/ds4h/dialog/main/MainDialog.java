@@ -600,6 +600,7 @@ public class MainDialog extends ImageWindow {
     }
 
 
+    private boolean debounce = false;
     private class KeyboardEventDispatcher implements KeyEventDispatcher {
         @Override
         public boolean dispatchKeyEvent(KeyEvent e) {
@@ -607,7 +608,14 @@ public class MainDialog extends ImageWindow {
             if (isReleased && e.getKeyCode() == KeyEvent.VK_C && mouseOverCanvas) {
                 Point point = getCanvas().getCursorLoc();
                 Pair<BigDecimal, BigDecimal> clickCoordinates = new Pair<>(BigDecimal.valueOf(point.getX()), BigDecimal.valueOf(point.getY()));
-                eventListener.onMainDialogEvent(new AddRoiEvent(clickCoordinates));
+                if (!debounce) {
+                    debounce = true;
+                    new Thread(() -> {
+                        eventListener.onMainDialogEvent(new AddRoiEvent(clickCoordinates));
+                        debounce = false;
+                    }).start();
+                }
+                e.consume();
             }
             return false;
         }

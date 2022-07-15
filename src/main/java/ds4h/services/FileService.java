@@ -9,6 +9,7 @@
 
 package ds4h.services;
 
+import ds4h.utils.ImageApprovedExtension;
 import ij.IJ;
 import ij.io.DirectoryChooser;
 
@@ -18,7 +19,10 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.*;
 import java.net.URL;
-import java.nio.file.*;
+import java.nio.file.FileSystems;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.security.CodeSource;
 import java.util.List;
 import java.util.*;
@@ -37,8 +41,12 @@ public class FileService {
         return new File(directory, filename).exists();
     }
 
+    public static FilenameFilter imagesFilenameFile() {
+        return (dir, name) -> Arrays.stream(ImageApprovedExtension.values()).anyMatch(ext -> name.endsWith("." + ext.name().toLowerCase()));
+    }
+
     public static List<String> promptForFiles() {
-        FileDialog fileDialog = FileService.fileDialogHandler(true, false, null);
+        FileDialog fileDialog = FileService.fileDialogHandler(true, false, imagesFilenameFile());
         return Arrays.stream(fileDialog.getFiles()).map(File::getPath).collect(Collectors.toList());
     }
 

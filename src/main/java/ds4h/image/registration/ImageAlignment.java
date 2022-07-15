@@ -568,7 +568,6 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
             this.getMainDialog().setPrevImageButtonEnabled(this.getEditor().hasPrevious());
             this.getMainDialog().setNextImageButtonEnabled(this.getEditor().hasNext());
             this.getMainDialog().setTitle(MessageFormat.format(MAIN_DIALOG_TITLE_PATTERN, this.getEditor().getCurrentPosition() + 1, this.getEditor().getAllImagesCounterSum()));
-            // this.getEditor().getCurrentImage()().buildMouseListener();
             this.getLoadingDialog().hideDialog();
             this.refreshRoiGUI();
             this.getLoadingDialog().showDialog();
@@ -648,28 +647,32 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
                     return;
                 }
             } else {
-                // remove the image selected
-                this.getRemoveImageDialog().removeImageFile(imageFileIndex);
-                this.getEditor().removeImageFile(imageFileIndex);
-                this.getEditor().removeOriginalImageFile(imageFileIndex);
+                Utilities.setTimeout(() -> {
+                    // remove the image selected
+                    this.getRemoveImageDialog().removeImageFile(imageFileIndex);
+                    this.getEditor().removeImageFile(imageFileIndex);
+                    this.getEditor().removeOriginalImageFile(imageFileIndex);
+                }, 15);
             }
-            this.getMainDialog().changeImage(this.getEditor().getCurrentImage());
-            int finalIndex = this.getEditor().getCurrentPosition();
-            if (finalIndex < 0) {
-                finalIndex = 0;
-            }
-            if (this.getEditor().getAllImagesCounterSum() == 1) {
-                this.getMainDialog().setAutoAlignButtonEnabled(false);
-            }
-            finalIndex = finalIndex + 1;
-            if (this.getEditor().getAllImagesCounterSum() < finalIndex && this.getEditor().getCurrentPosition() == this.getEditor().getAllImagesCounterSum()) {
-                finalIndex = this.getEditor().getAllImagesCounterSum();
-            }
-            this.getMainDialog().setPrevImageButtonEnabled(finalIndex > 1 && this.getEditor().getCurrentPosition() != 0);
-            this.getMainDialog().setNextImageButtonEnabled(getEditor().hasNext());
-            this.getMainDialog().setTitle(MessageFormat.format(MAIN_DIALOG_TITLE_PATTERN, finalIndex, this.getEditor().getAllImagesCounterSum()));
-            this.refreshRoiGUI();
-            this.getRemoveImageDialog().dispose();
+            Utilities.setTimeout(() -> {
+                this.getMainDialog().changeImage(this.getEditor().getCurrentImage());
+                int finalIndex = this.getEditor().getCurrentPosition();
+                if (finalIndex < 0) {
+                    finalIndex = 0;
+                }
+                if (this.getEditor().getAllImagesCounterSum() == 1) {
+                    this.getMainDialog().setAutoAlignButtonEnabled(false);
+                }
+                finalIndex = finalIndex + 1;
+                if (this.getEditor().getAllImagesCounterSum() < finalIndex && this.getEditor().getCurrentPosition() == this.getEditor().getAllImagesCounterSum()) {
+                    finalIndex = this.getEditor().getAllImagesCounterSum();
+                }
+                this.getMainDialog().setPrevImageButtonEnabled(finalIndex > 1 && this.getEditor().getCurrentPosition() != 0);
+                this.getMainDialog().setNextImageButtonEnabled(getEditor().hasNext());
+                this.getMainDialog().setTitle(MessageFormat.format(MAIN_DIALOG_TITLE_PATTERN, finalIndex, this.getEditor().getAllImagesCounterSum()));
+                this.refreshRoiGUI();
+                this.getRemoveImageDialog().dispose();
+            }, 30);
         }
     }
 

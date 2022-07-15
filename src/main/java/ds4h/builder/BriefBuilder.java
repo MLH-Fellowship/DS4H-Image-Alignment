@@ -257,7 +257,7 @@ public class BriefBuilder extends AbstractBuilder<Mat> {
 
     private Mat getDescriptor(Mat image, MatOfKeyPoint keyPoints) {
         final Mat tempDescriptor = new Mat();
-        final BriefDescriptorExtractor extractor = BriefDescriptorExtractor.create(64, true);
+        final BriefDescriptorExtractor extractor = BriefDescriptorExtractor.create(32, true);
         extractor.compute(image, keyPoints, tempDescriptor);
         return tempDescriptor;
     }

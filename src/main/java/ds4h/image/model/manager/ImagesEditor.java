@@ -99,7 +99,7 @@ public class ImagesEditor implements Observable {
      */
     public void removeImageFile(int index) {
         this.getImageFiles().remove(index);
-        this.currentPosition = this.getCurrentPosition() >= this.getAllImagesCounterSum() ? this.getCurrentPosition() - 1 : this.getCurrentPosition();
+        this.currentPosition = this.getCurrentPosition() >= this.getAllImagesCounterSum() ? this.getAllImagesCounterSum() - 1 : this.getCurrentPosition();
     }
 
     public void removeOriginalImageFile(int imageFileIndex) {
@@ -201,7 +201,7 @@ public class ImagesEditor implements Observable {
             if (imageFile != null) {
                 final SlideImage image = imageFile.getImage(index - progressive, wholeSlide);
                 if (!isOriginal) {
-                    image.setTitle(MessageFormat.format("Editor Image {0}/{1}", index - progressive, this.getAllImagesCounterSum()));
+                    image.setTitle(MessageFormat.format("Editor Image {0}/{1}", index + 1, this.getAllImagesCounterSum()));
                 }
                 return image;
             }

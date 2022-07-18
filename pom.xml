@@ -268,7 +268,6 @@
                                         <exclude>META-INF/*.SF</exclude>
                                         <exclude>META-INF/*.DSA</exclude>
                                         <exclude>META-INF/*.RSA</exclude>
-
                                     </excludes>
                                 </filter>
                             </filters>
@@ -277,13 +276,13 @@
                 </executions>
             </plugin>-->
         </plugins>
-        <resources>
+     <!--   <resources>
             <resource>
                 <directory>src/main/assets</directory>
                 <includes>
                     <include>**/*</include>
                 </includes>
             </resource>
-        </resources>
+        </resources>-->
     </build>
 </project>

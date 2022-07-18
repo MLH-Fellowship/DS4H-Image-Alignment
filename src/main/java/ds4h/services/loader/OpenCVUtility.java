@@ -14,32 +14,30 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public interface OpenCVUtility {
-  /**
-   *
-   * @return the current version
-   */
-  static String getVersion() {
-    return "455";
-  }
+    /**
+     * @return the current version
+     */
+    static String getVersion() {
+        return "455";
+    }
 
-  /**
-   *
-   * @return the res folder
-   */
-  static String getDir() {
-    return "/opencv/";
-  }
+    /**
+     * @return the res folder
+     */
+    static String getDir() {
+        return "/opencv/";
+    }
 
-  /**
-   *
-   * @param prefix like 'libopencv'
-   * @param ext like '.dylib'
-   * @return all the libraries full path list
-   */
-  static List<String> loadLibraries(String prefix, String ext) {
-    return Arrays.stream(OpenCVLibraries.values())
-          .map(Enum::name)
-          .map(name -> getDir() + prefix + name.toLowerCase() + getVersion() + ext)
-          .collect(Collectors.toList());
-  }
+    /**
+     * @param prefix like 'libopencv'
+     * @param ext    like '.dylib'
+     * @return all the libraries full path list
+     */
+    static List<String> loadLibraries(String prefix, String ext) {
+        return Arrays.stream(OpenCVLibraries.values()).map(Enum::name).map(name -> getDir() + prefix + name.toLowerCase() + getVersion() + ext).collect(Collectors.toList());
+    }
+
+    static List<String> loadGivenLibraries(String prefix, String ext, List<OpenCVLibraries> libraries) {
+        return libraries.stream().map(Enum::name).map(name -> getDir() + prefix + name.toLowerCase() + getVersion() + ext).collect(Collectors.toList());
+    }
 }

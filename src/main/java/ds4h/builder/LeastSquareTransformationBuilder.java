@@ -77,6 +77,7 @@ public class LeastSquareTransformationBuilder extends AbstractBuilder<SlideImage
         try {
             SwingUtilities.invokeAndWait(() -> {
                 settingDialog = new SettingDialog(frame, "Align Settings", true);
+                settingDialog.requestFocus();
                 settingDialog.getOkButton().addActionListener(e -> settingDialog.dispose());
                 if (!settingDialog.initIsSuccessFul()) {
                     isSuccessful[0] = false;

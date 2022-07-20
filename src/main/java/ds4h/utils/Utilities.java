@@ -10,13 +10,12 @@ import java.io.InputStream;
  * Class containing various utilities of the plugin
  */
 public class Utilities {
-    public static void setTimeout(Runnable runnable, int delay){
+    public static void setTimeout(Runnable runnable, int delay) {
         new Thread(() -> {
             try {
                 Thread.sleep(delay);
                 runnable.run();
-            }
-            catch (Exception e){
+            } catch (Exception e) {
                 IJ.showMessage(e.getMessage());
             }
         }).start();

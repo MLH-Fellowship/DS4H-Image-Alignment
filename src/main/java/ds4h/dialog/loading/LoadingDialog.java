@@ -1,5 +1,6 @@
 package ds4h.dialog.loading;
 
+import ds4h.utils.ProgressAbleWorker;
 import ds4h.utils.Utilities;
 import ij.IJ;
 
@@ -10,6 +11,13 @@ import java.io.IOException;
 import static javax.swing.SwingConstants.CENTER;
 
 public class LoadingDialog extends JDialog {
+  private final ProgressAbleWorker<Void, Void> worker = new ProgressAbleWorker<Void, Void>() {
+    @Override
+    protected Void doInBackground() throws Exception {
+      Thread.sleep(100);
+      return null;
+    }
+  };
   public LoadingDialog() {
     super();
     ImageIcon loading = null;
@@ -28,13 +36,19 @@ public class LoadingDialog extends JDialog {
     this.setSize(400, 200);
     Dimension dim = Toolkit.getDefaultToolkit().getScreenSize();
     this.setLocation(dim.width / 2 - this.getSize().width / 2, dim.height / 2 - this.getSize().height / 2);
+    worker.addPropertyChangeListener(evt -> {
+      if ("progress".equals(evt.getPropertyName())) {
+        setVisible((Integer) evt.getNewValue() == 0);
+      }
+    });
+    worker.execute();
   }
   
   public void showDialog() {
-    SwingUtilities.invokeLater(() -> setVisible(true));
+    worker.startProgress();
   }
   
   public void hideDialog() {
-    SwingUtilities.invokeLater(() -> setVisible(false));
+    worker.doneProgress();
   }
 }

@@ -77,6 +77,7 @@ public class SettingDialog extends JDialog {
         this.getCheckIsAffine().addItemListener(e -> {
             if (e.getStateChange() == ItemEvent.SELECTED) {
                 this.getEvent().setAffine(true);
+                this.getEvent().setProjective(false);
                 this.getCheckIsProjective().setSelected(false);
             }
         });
@@ -86,6 +87,7 @@ public class SettingDialog extends JDialog {
         this.getCheckIsProjective().addItemListener(e -> {
             if (e.getStateChange() == ItemEvent.SELECTED) {
                 this.getEvent().setProjective(true);
+                this.getEvent().setAffine(false);
                 this.getCheckIsAffine().setSelected(false);
             }
         });

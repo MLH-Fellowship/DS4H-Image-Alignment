@@ -21,7 +21,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.stream.Stream;
 
-public class ImagesEditor implements Observable {
+public class ImagesEditor implements Observable, Cloneable {
     // the YYYY-MM-DD format grants to the user the fact that the sorting can be done always by the name
     private static final String DATE_YMD_FORMAT = "yyyy-MM-dd";
     private static final String DATE_HMS_FORMAT = "HH-mm-ss";
@@ -264,6 +264,11 @@ public class ImagesEditor implements Observable {
 
     public void loadOriginalImagesWholeSlides() {
         Stream.of(this.getOriginalImageFiles()).flatMap(Collection::parallelStream).filter(imageFile -> imageFile.getImagesWholeSlide().size() == 0).forEachOrdered(ImageFile::createImagesWholeSlide);
+    }
+
+    @Override
+    public Object clone() throws CloneNotSupportedException {
+        return super.clone();
     }
 
     /**

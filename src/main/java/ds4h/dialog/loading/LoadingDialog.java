@@ -14,12 +14,17 @@ public class LoadingDialog extends JDialog {
   private final ProgressAbleWorker<Void, Void> worker = new ProgressAbleWorker<Void, Void>() {
     @Override
     protected Void doInBackground() throws Exception {
-      Thread.sleep(100);
+      Thread.sleep(500);
       return null;
     }
   };
+
   public LoadingDialog() {
     super();
+    this.createDialog();
+  }
+
+  private void createDialog() {
     ImageIcon loading = null;
     try {
       byte[] bytes = Utilities.inputStreamToByteArray(getClass().getResourceAsStream("/spinner.gif"));
@@ -32,23 +37,29 @@ public class LoadingDialog extends JDialog {
     this.add(new JLabel("Working in progress...", CENTER), BorderLayout.SOUTH);
     this.setDefaultCloseOperation(DISPOSE_ON_CLOSE);
     this.setUndecorated(true);
-    this.setModalityType(ModalityType.APPLICATION_MODAL);
+    // This modality type assures that it doesn't block the execution
+    this.setModalityType(ModalityType.MODELESS);
     this.setSize(400, 200);
-    Dimension dim = Toolkit.getDefaultToolkit().getScreenSize();
-    this.setLocation(dim.width / 2 - this.getSize().width / 2, dim.height / 2 - this.getSize().height / 2);
-    worker.addPropertyChangeListener(evt -> {
+    Dimension dimension = Toolkit.getDefaultToolkit().getScreenSize();
+    this.setLocation(dimension.width / 2 - this.getSize().width / 2, dimension.height / 2 - this.getSize().height / 2);
+    this.getWorker().addPropertyChangeListener(evt -> {
       if ("progress".equals(evt.getPropertyName())) {
-        setVisible((Integer) evt.getNewValue() == 0);
+        this.setVisible((Integer) evt.getNewValue() == 0);
       }
     });
-    worker.execute();
+    this.getWorker().execute();
   }
-  
+
   public void showDialog() {
-    worker.startProgress();
+      this.getWorker().startProgress();
   }
   
   public void hideDialog() {
-    worker.doneProgress();
+      this.getWorker().doneProgress();
+  }
+
+
+  public ProgressAbleWorker<Void, Void> getWorker() {
+    return this.worker;
   }
 }

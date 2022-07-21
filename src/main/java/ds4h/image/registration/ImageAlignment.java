@@ -23,21 +23,17 @@ import ds4h.dialog.loading.LoadingDialog;
 import ds4h.dialog.main.MainDialog;
 import ds4h.dialog.main.OnMainDialogEventListener;
 import ds4h.dialog.main.event.*;
-import ds4h.dialog.preview.OnPreviewDialogEventListener;
 import ds4h.dialog.preview.PreviewDialog;
-import ds4h.dialog.preview.event.ChangeImagePreviewEvent;
-import ds4h.dialog.preview.event.CloseDialogEvent;
-import ds4h.dialog.preview.event.IPreviewDialogEvent;
 import ds4h.dialog.remove.OnRemoveDialogEventListener;
 import ds4h.dialog.remove.RemoveImageDialog;
 import ds4h.dialog.remove.event.IRemoveDialogEvent;
 import ds4h.dialog.remove.event.RemoveImageEvent;
-import ds4h.image.model.manager.ImagesEditor;
 import ds4h.image.model.manager.ImageFile;
+import ds4h.image.model.manager.ImagesEditor;
+import ds4h.image.model.manager.slide.SlideImage;
 import ds4h.image.model.project.Project;
 import ds4h.image.model.project.ProjectImage;
 import ds4h.image.model.project.ProjectImageRoi;
-import ds4h.image.model.manager.slide.SlideImage;
 import ds4h.services.FileService;
 import ds4h.services.ProjectService;
 import ds4h.services.loader.Loader;
@@ -70,7 +66,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialogEventListener, OnAlignDialogEventListener, OnRemoveDialogEventListener, PropertyChangeListener {
+public class ImageAlignment implements OnMainDialogEventListener, OnAlignDialogEventListener, OnRemoveDialogEventListener, PropertyChangeListener {
     private static final String IMAGES_SCALED_MESSAGE = "Image size too large: image has been scaled for compatibility.";
     private static final String SINGLE_IMAGE_MESSAGE = "Only one image detected in the stack: align operation will be unavailable.";
     private static final String IMAGES_OVERSIZE_MESSAGE = "Cannot open the selected image: image exceed supported dimensions.";
@@ -563,27 +559,41 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
         } else {
             this.getEditor().previous();
         }
+
         if (this.getEditor().getCurrentImage() != null) {
-            this.getMainDialog().changeImage(this.getEditor().getCurrentImage());
-            this.getMainDialog().setPrevImageButtonEnabled(this.getEditor().hasPrevious());
-            this.getMainDialog().setNextImageButtonEnabled(this.getEditor().hasNext());
-            this.getMainDialog().setTitle(MessageFormat.format(MAIN_DIALOG_TITLE_PATTERN, this.getEditor().getCurrentPosition() + 1, this.getEditor().getAllImagesCounterSum()));
-            this.getLoadingDialog().hideDialog();
-            this.refreshRoiGUI();
-            this.getLoadingDialog().showDialog();
-            this.getLoadingDialog().hideDialog();
+            new Thread(() -> {
+                this.getMainDialog().changeImage(this.getEditor().getCurrentImage());
+                this.getMainDialog().setPrevImageButtonEnabled(this.getEditor().hasPrevious());
+                this.getMainDialog().setNextImageButtonEnabled(this.getEditor().hasNext());
+                this.getMainDialog().setTitle(MessageFormat.format(MAIN_DIALOG_TITLE_PATTERN, this.getEditor().getCurrentPosition() + 1, this.getEditor().getAllImagesCounterSum()));
+                this.getLoadingDialog().hideDialog();
+                this.refreshRoiGUI();
+                this.getLoadingDialog().showDialog();
+                this.getLoadingDialog().hideDialog();
+            }).start();
         }
     }
 
     private void previewImage(PreviewImageEvent dialogEvent) {
         new Thread(() -> {
             if (!dialogEvent.getValue()) {
-                this.getPreviewDialog().close();
+                SwingUtilities.invokeLater(() -> {
+                    this.getMainDialog().setImage(this.getEditor().getCurrentImage());
+                    WindowManager.setCurrentWindow(this.getMainDialog());
+                    WindowManager.getCurrentWindow().getCanvas().fitToWindow();
+                    this.getMainDialog().setVisible(true);
+                    this.getMainDialog().setPrevImageButtonEnabled(this.getEditor().hasPrevious());
+                    this.getMainDialog().setNextImageButtonEnabled(this.getEditor().hasNext());
+                    this.getMainDialog().setTitle(MessageFormat.format(MAIN_DIALOG_TITLE_PATTERN, this.getEditor().getCurrentPosition() + 1, this.getEditor().getAllImagesCounterSum()));
+                });
                 return;
             }
             try {
                 this.getLoadingDialog().showDialog();
-                this.previewDialog = new PreviewDialog(this.getEditor().getCurrentImage(), this, this.getEditor().getCurrentPosition(), this.getEditor().getAllImagesCounterSum(), "Preview Image " + (this.getEditor().getCurrentPosition() + 1) + "/" + this.getEditor().getAllImagesCounterSum());
+                ImagesEditor editorClone = (ImagesEditor) this.getEditor().clone();
+                this.previewDialog = new PreviewDialog(editorClone, this.getMainDialog());
+                WindowManager.addWindow(this.getPreviewDialog());
+                WindowManager.setCurrentWindow(this.getPreviewDialog());
             } catch (Exception e) {
                 IJ.showMessage(e.getMessage());
             }
@@ -592,24 +602,6 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
             this.getPreviewDialog().setVisible(true);
             this.getPreviewDialog().drawRois();
         }).start();
-    }
-
-    @Override
-    public void onPreviewDialogEvent(IPreviewDialogEvent dialogEvent) {
-        if (dialogEvent instanceof ChangeImagePreviewEvent) {
-            ChangeImagePreviewEvent event = (ChangeImagePreviewEvent) dialogEvent;
-            new Thread(() -> {
-                WindowManager.setCurrentWindow(this.getEditor().getCurrentImage().getWindow());
-                SlideImage previewSlideImage = this.getEditor().getSlideImage(event.getIndex());
-                this.getPreviewDialog().changeImage(previewSlideImage, "Preview Image " + (event.getIndex() + 1) + "/" + this.getEditor().getAllImagesCounterSum());
-                this.getLoadingDialog().hideDialog();
-            }).start();
-            this.getLoadingDialog().showDialog();
-        }
-
-        if (dialogEvent instanceof CloseDialogEvent) {
-            this.getMainDialog().setPreviewWindowCheckBox(false);
-        }
     }
 
     @Override
@@ -717,6 +709,7 @@ public class ImageAlignment implements OnMainDialogEventListener, OnPreviewDialo
             this.editor.addPropertyChangeListener(this);
             this.getEditor().next();
             this.mainDialog = new MainDialog(this.getEditor().getCurrentImage(), this);
+            WindowManager.addWindow(this.getMainDialog());
             this.getMainDialog().setPrevImageButtonEnabled(this.getEditor().hasPrevious());
             this.getMainDialog().setNextImageButtonEnabled(this.getEditor().hasNext());
             this.getMainDialog().setTitle(MessageFormat.format(MAIN_DIALOG_TITLE_PATTERN, this.getEditor().getCurrentPosition() + 1, this.getEditor().getAllImagesCounterSum()));

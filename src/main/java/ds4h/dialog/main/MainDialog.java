@@ -469,20 +469,24 @@ public class MainDialog extends ImageWindow {
      * @param slideImage
      */
     public void changeImage(SlideImage slideImage) {
-        if (slideImage == null) return;
-        this.setImage(slideImage);
-        this.removeMouseListener();
-        slideImage.backupRois();
-        slideImage.getManager().reset();
-        this.setImage(slideImage);
-        this.addMouseListener();
-        this.btnDeleteRoi.setEnabled(jListRois.getSelectedIndices().length != 0);
-        this.getCurrentImage().restoreRois();
-        WindowManager.getCurrentWindow().getCanvas().fitToWindow();
-        this.drawRois(slideImage.getManager());
-        this.addEventListenerToImage();
-        IJ.selectWindow(this.getImagePlus().getID());
-        this.pack();
+        try {
+            if (slideImage == null) return;
+            this.setImage(slideImage);
+            this.removeMouseListener();
+            slideImage.backupRois();
+            slideImage.getManager().reset();
+            this.setImage(slideImage);
+            this.addMouseListener();
+            this.btnDeleteRoi.setEnabled(jListRois.getSelectedIndices().length != 0);
+            this.getCurrentImage().restoreRois();
+            WindowManager.getCurrentWindow().getCanvas().fitToWindow();
+            this.drawRois(slideImage.getManager());
+            this.addEventListenerToImage();
+            IJ.selectWindow(this.getImagePlus().getID());
+            this.pack();
+        } catch (Exception e) {
+            System.out.println(e.getMessage() + " " + Arrays.toString(e.getStackTrace()));
+        }
     }
 
     /**
@@ -527,6 +531,19 @@ public class MainDialog extends ImageWindow {
             this.jListRoisModel.add(index, MessageFormat.format(pattern, index + 1, x, y));
             index++;
         }
+    }
+
+    /**
+     * This method is overridden because whoever created Imagej 1.x library has left A LOT OF BUGS
+     * The window remains "closed" even if you're displaying again ( like in our use case, we have to close the main
+     * dialog and open the preview dialog, so after you close the preview dialog for ImageJ WindowManager, the other window
+     * is still closed  without this workaround )
+     * @param e
+     */
+    @Override
+    public void windowActivated(WindowEvent e) {
+        super.windowActivated(e);
+        closed = false;
     }
 
     public void setPreviewWindowCheckBox(boolean value) {

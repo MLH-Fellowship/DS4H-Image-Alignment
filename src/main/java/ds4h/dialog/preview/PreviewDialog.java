@@ -39,7 +39,6 @@ public class PreviewDialog extends ImageWindow {
         this.setImage(startingSlideImage);
         this.setTitle(title);
         final CustomCanvas canvas = (CustomCanvas) getCanvas();
-        final GridBagLayout layout = new GridBagLayout();
         final Panel all = new Panel();
 
         final JScrollBar scrollbar = new JScrollBar(Adjustable.HORIZONTAL, scrollbarStartingValue, 1, 0, scrollbarMaximum);

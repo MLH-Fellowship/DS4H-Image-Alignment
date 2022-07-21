@@ -253,7 +253,7 @@ public class MainDialog extends ImageWindow {
         btnPrevImage.setToolTipText("Select previous image in the stack");
         btnNextImage.setToolTipText("Select next image in the stack");
 
-        final JLabel changeImageLabel = new JLabel("Press \"A\" or \"D\" to change image", LEFT);
+        /*final JLabel changeImageLabel = new JLabel("Press \"A\" or \"D\" to change image", LEFT);
         changeImageLabel.setForeground(Color.gray);
 
         actionsConstraints.gridx = 0;
@@ -261,27 +261,27 @@ public class MainDialog extends ImageWindow {
         actionsConstraints.fill = GridBagConstraints.BOTH;
         actionsConstraints.gridwidth = 1;
         actionsConstraints.gridheight = 1;
-        actionsJPanel.add(changeImageLabel, actionsConstraints);
+        actionsJPanel.add(changeImageLabel, actionsConstraints);*/
         actionsConstraints.gridx = 0;
-        actionsConstraints.gridy = 1;
+        actionsConstraints.gridy = 0;
         actionsConstraints.fill = GridBagConstraints.BOTH;
         actionsConstraints.gridwidth = 1;
         actionsConstraints.gridheight = 1;
         actionsJPanel.add(checkShowPreview, actionsConstraints);
         actionsConstraints.gridx = 0;
-        actionsConstraints.gridy = 2;
+        actionsConstraints.gridy = 1;
         actionsConstraints.fill = GridBagConstraints.BOTH;
         actionsConstraints.gridwidth = 1;
         actionsConstraints.gridheight = 1;
         actionsJPanel.add(btnDeleteRoi, actionsConstraints);
         actionsConstraints.gridx = 0;
-        actionsConstraints.gridy = 3;
+        actionsConstraints.gridy = 2;
         actionsConstraints.fill = GridBagConstraints.BOTH;
         actionsConstraints.gridwidth = 1;
         actionsConstraints.gridheight = 1;
         actionsJPanel.add(btnPrevImage, actionsConstraints);
         actionsConstraints.gridx = 0;
-        actionsConstraints.gridy = 4;
+        actionsConstraints.gridy = 3;
         actionsConstraints.fill = GridBagConstraints.BOTH;
         actionsConstraints.gridwidth = 1;
         actionsConstraints.gridheight = 1;

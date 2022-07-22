@@ -576,7 +576,7 @@ public class ImageAlignment implements OnMainDialogEventListener, OnAlignDialogE
 
     private void previewImage(PreviewImageEvent dialogEvent) {
             if (!dialogEvent.getValue()) {
-                new Thread(() -> {
+                Utilities.setTimeout(() -> {
                     this.getLoadingDialog().hideDialog();
                     this.getMainDialog().setImage(this.getEditor().getCurrentImage());
                     WindowManager.setCurrentWindow(this.getMainDialog());
@@ -585,7 +585,7 @@ public class ImageAlignment implements OnMainDialogEventListener, OnAlignDialogE
                     this.getMainDialog().setPrevImageButtonEnabled(this.getEditor().hasPrevious());
                     this.getMainDialog().setNextImageButtonEnabled(this.getEditor().hasNext());
                     this.getMainDialog().setTitle(MessageFormat.format(MAIN_DIALOG_TITLE_PATTERN, this.getEditor().getCurrentPosition() + 1, this.getEditor().getAllImagesCounterSum()));
-                }).start();
+                }, 2000);
                 return;
             }
         new Thread(() -> {

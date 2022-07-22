@@ -22,16 +22,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class PreviewDialog extends ImageWindow {
     private final MainDialog mainDialog;
-    private ImagesEditor imagesEditor;
+    private final ImagesEditor imagesEditor;
 
     public PreviewDialog(ImagesEditor imagesEditor, MainDialog mainDialog) {
         super(imagesEditor.getCurrentImage(), new CustomCanvas(imagesEditor.getCurrentImage()));
         this.mainDialog = mainDialog;
-        try {
-            this.imagesEditor = (ImagesEditor) imagesEditor.clone();
-        } catch (CloneNotSupportedException e) {
-            IJ.showMessage(e.getMessage());
-        }
+        this.imagesEditor = imagesEditor;
         SlideImage startingSlideImage = this.getImagesEditor().getCurrentImage();
         int scrollbarStartingValue = this.getImagesEditor().getCurrentPosition();
         int scrollbarMaximum = this.getImagesEditor().getAllImagesCounterSum();

@@ -28,8 +28,6 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static javax.swing.SwingConstants.LEFT;
-
 public class MainDialog extends ImageWindow {
     private static final String DIALOG_STATIC_TITLE = "DS4H Image Alignment.";
     private static final String SCALE_OPTION = "scale";
@@ -248,6 +246,7 @@ public class MainDialog extends ImageWindow {
         actionsJPanel.setBorder(BorderFactory.createTitledBorder("Actions"));
 
         checkShowPreview.setToolTipText("Show a preview window");
+        checkShowPreview.setVisible(false);
         btnDeleteRoi.setToolTipText("Delete selected current corner point");
         btnDeleteRoi.setEnabled(false);
         btnPrevImage.setToolTipText("Select previous image in the stack");

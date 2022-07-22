@@ -561,7 +561,7 @@ public class ImageAlignment implements OnMainDialogEventListener, OnAlignDialogE
         }
 
         if (this.getEditor().getCurrentImage() != null) {
-            new Thread(() -> {
+            SwingUtilities.invokeLater(() -> {
                 this.getMainDialog().changeImage(this.getEditor().getCurrentImage());
                 this.getMainDialog().setPrevImageButtonEnabled(this.getEditor().hasPrevious());
                 this.getMainDialog().setNextImageButtonEnabled(this.getEditor().hasNext());
@@ -570,13 +570,13 @@ public class ImageAlignment implements OnMainDialogEventListener, OnAlignDialogE
                 this.refreshRoiGUI();
                 this.getLoadingDialog().showDialog();
                 this.getLoadingDialog().hideDialog();
-            }).start();
+            });
         }
     }
 
     private void previewImage(PreviewImageEvent dialogEvent) {
             if (!dialogEvent.getValue()) {
-                Utilities.setTimeout(() -> {
+                SwingUtilities.invokeLater(() -> {
                     this.getLoadingDialog().hideDialog();
                     this.getMainDialog().setImage(this.getEditor().getCurrentImage());
                     WindowManager.setCurrentWindow(this.getMainDialog());
@@ -585,16 +585,15 @@ public class ImageAlignment implements OnMainDialogEventListener, OnAlignDialogE
                     this.getMainDialog().setPrevImageButtonEnabled(this.getEditor().hasPrevious());
                     this.getMainDialog().setNextImageButtonEnabled(this.getEditor().hasNext());
                     this.getMainDialog().setTitle(MessageFormat.format(MAIN_DIALOG_TITLE_PATTERN, this.getEditor().getCurrentPosition() + 1, this.getEditor().getAllImagesCounterSum()));
-                }, 2000);
+                });
                 return;
             }
-        new Thread(() -> {
+        SwingUtilities.invokeLater(() -> {
             try {
                 this.getLoadingDialog().showDialog();
-                ImagesEditor editorClone = (ImagesEditor) this.getEditor().clone();
+                ImagesEditor editorClone = new ImagesEditor(this.getEditor());
                 this.getLoadingDialog().hideDialog();
                 this.previewDialog = new PreviewDialog(editorClone, this.getMainDialog());
-                WindowManager.addWindow(this.getPreviewDialog());
                 WindowManager.setCurrentWindow(this.getPreviewDialog());
             } catch (Exception e) {
                 IJ.showMessage(e.getMessage());
@@ -602,7 +601,7 @@ public class ImageAlignment implements OnMainDialogEventListener, OnAlignDialogE
             this.getPreviewDialog().pack();
             this.getPreviewDialog().setVisible(true);
             this.getPreviewDialog().drawRois();
-        }).start();
+        });
     }
 
     @Override
@@ -710,7 +709,6 @@ public class ImageAlignment implements OnMainDialogEventListener, OnAlignDialogE
             this.editor.addPropertyChangeListener(this);
             this.getEditor().next();
             this.mainDialog = new MainDialog(this.getEditor().getCurrentImage(), this);
-            WindowManager.addWindow(this.getMainDialog());
             this.getMainDialog().setPrevImageButtonEnabled(this.getEditor().hasPrevious());
             this.getMainDialog().setNextImageButtonEnabled(this.getEditor().hasNext());
             this.getMainDialog().setTitle(MessageFormat.format(MAIN_DIALOG_TITLE_PATTERN, this.getEditor().getCurrentPosition() + 1, this.getEditor().getAllImagesCounterSum()));

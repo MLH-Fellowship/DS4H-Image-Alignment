@@ -577,7 +577,7 @@ public class ImageAlignment implements OnMainDialogEventListener, OnAlignDialogE
     private void previewImage(PreviewImageEvent dialogEvent) {
         new Thread(() -> {
             if (!dialogEvent.getValue()) {
-                SwingUtilities.invokeLater(() -> {
+                new Thread(() -> {
                     this.getMainDialog().setImage(this.getEditor().getCurrentImage());
                     WindowManager.setCurrentWindow(this.getMainDialog());
                     WindowManager.getCurrentWindow().getCanvas().fitToWindow();
@@ -585,7 +585,7 @@ public class ImageAlignment implements OnMainDialogEventListener, OnAlignDialogE
                     this.getMainDialog().setPrevImageButtonEnabled(this.getEditor().hasPrevious());
                     this.getMainDialog().setNextImageButtonEnabled(this.getEditor().hasNext());
                     this.getMainDialog().setTitle(MessageFormat.format(MAIN_DIALOG_TITLE_PATTERN, this.getEditor().getCurrentPosition() + 1, this.getEditor().getAllImagesCounterSum()));
-                });
+                }).start();
                 return;
             }
             try {

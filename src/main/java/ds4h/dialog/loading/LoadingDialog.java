@@ -51,6 +51,7 @@ public class LoadingDialog extends JDialog {
   }
 
   public void showDialog() {
+      repaint();
       this.getWorker().startProgress();
   }
   

@@ -56,7 +56,8 @@ public class LoadingDialog extends JDialog {
   }
   
   public void hideDialog() {
-      this.getWorker().doneProgress();
+    repaint();
+    this.getWorker().doneProgress();
   }
 
 

@@ -575,9 +575,9 @@ public class ImageAlignment implements OnMainDialogEventListener, OnAlignDialogE
     }
 
     private void previewImage(PreviewImageEvent dialogEvent) {
-        new Thread(() -> {
             if (!dialogEvent.getValue()) {
                 new Thread(() -> {
+                    this.getLoadingDialog().hideDialog();
                     this.getMainDialog().setImage(this.getEditor().getCurrentImage());
                     WindowManager.setCurrentWindow(this.getMainDialog());
                     WindowManager.getCurrentWindow().getCanvas().fitToWindow();
@@ -588,16 +588,17 @@ public class ImageAlignment implements OnMainDialogEventListener, OnAlignDialogE
                 }).start();
                 return;
             }
+        new Thread(() -> {
             try {
                 this.getLoadingDialog().showDialog();
                 ImagesEditor editorClone = (ImagesEditor) this.getEditor().clone();
+                this.getLoadingDialog().hideDialog();
                 this.previewDialog = new PreviewDialog(editorClone, this.getMainDialog());
                 WindowManager.addWindow(this.getPreviewDialog());
                 WindowManager.setCurrentWindow(this.getPreviewDialog());
             } catch (Exception e) {
                 IJ.showMessage(e.getMessage());
             }
-            this.getLoadingDialog().hideDialog();
             this.getPreviewDialog().pack();
             this.getPreviewDialog().setVisible(true);
             this.getPreviewDialog().drawRois();

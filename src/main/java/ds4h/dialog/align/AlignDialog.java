@@ -37,7 +37,6 @@ public class AlignDialog extends StackWindow {
         add(all, BorderLayout.CENTER);
     }
 
-
     @Override
     public MenuBar getMenuBar() {
         final MenuBar menuBar = new MenuBar();

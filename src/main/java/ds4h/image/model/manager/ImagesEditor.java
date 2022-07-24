@@ -171,13 +171,11 @@ public class ImagesEditor implements Observable {
     }
 
     public SlideImage getCurrentImage() {
-        // SlideImage image = this.getSlideImages().get(this.getCurrentPosition());
-        return getImage(getCurrentPosition(), false, false);
+        return getImage(this.getCurrentPosition(), false, false);
     }
 
     public SlideImage getCurrentOriginalImage() {
-        // SlideImage image = this.getOriginalSlideImages().get(this.getCurrentPosition());
-        return getImage(getCurrentPosition(), false, true);
+        return getImage(this.getCurrentPosition(), false, true);
     }
 
     public SlideImage getOriginalWholeSlideImage(int index) {

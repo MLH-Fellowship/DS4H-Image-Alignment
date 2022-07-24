@@ -644,7 +644,8 @@ public class ImageAlignment implements OnMainDialogEventListener, OnAlignDialogE
                     this.getRemoveImageDialog().removeImageFile(imageFileIndex);
                     this.getEditor().removeImageFile(imageFileIndex);
                     this.getEditor().removeOriginalImageFile(imageFileIndex);
-                }, 15);
+                    this.getEditor().next();
+                }, 10);
             }
             Utilities.setTimeout(() -> {
                 this.getMainDialog().changeImage(this.getEditor().getCurrentImage());
@@ -664,7 +665,7 @@ public class ImageAlignment implements OnMainDialogEventListener, OnAlignDialogE
                 this.getMainDialog().setTitle(MessageFormat.format(MAIN_DIALOG_TITLE_PATTERN, finalIndex, this.getEditor().getAllImagesCounterSum()));
                 this.refreshRoiGUI();
                 this.getRemoveImageDialog().dispose();
-            }, 30);
+            }, 500);
         }
     }
 

@@ -12,7 +12,6 @@ import ij.WindowManager;
 import ij.gui.ImageWindow;
 import ij.gui.Overlay;
 import ij.gui.Roi;
-import ij.gui.RoiListener;
 import ij.plugin.frame.RoiManager;
 
 import javax.swing.*;
@@ -55,6 +54,7 @@ public class MainDialog extends ImageWindow {
      * It doesn't make sense, this is only fast way I've found
      */
     private boolean titleHasToChange = true;
+    private boolean debounce = false;
 
     public MainDialog(SlideImage plus, OnMainDialogEventListener listener) {
         super(plus, new CustomCanvas(plus));
@@ -151,9 +151,7 @@ public class MainDialog extends ImageWindow {
         // Markers addition handlers
         KeyboardFocusManager manager = KeyboardFocusManager.getCurrentKeyboardFocusManager();
         manager.addKeyEventDispatcher(new KeyboardEventDispatcher());
-        this.listenerROI();
         this.handleCanvasMouseListeners(canvas);
-
         this.addEventListenerToImage();
         this.addMouseListener();
         WindowManager.getCurrentWindow().getCanvas().fitToWindow();
@@ -167,7 +165,34 @@ public class MainDialog extends ImageWindow {
             public void mouseDragged(MouseEvent e) {
                 super.mouseDragged(e);
                 // Check if the Rois in the image have changed position by user input; if so, update the list and notify the controller
-                if (jListRois.getSelectedIndices().length > 1) return;
+                if (jListRois.getSelectedIndices().length > 1) {
+                    SwingUtilities.invokeLater(() -> {
+                        final int[] indices = jListRois.getSelectedIndices();
+                        // IF MORE THAN ONE IS SELECTED IN JLIST THEN APPLY TRANSLATION TO ALL AT ONCE
+                        if (indices.length > 1) {
+                            // FIND THE ROI THAT HAS BEEN CLICKED DIRECTLY
+                            final Roi selectedRoi = canvas.getImage().getRoi();
+                            final Rectangle2D.Double bounds = selectedRoi.getFloatBounds();
+                            Roi[] roisAsArray = getCurrentImage().getManager().getRoisAsArray();
+                            if (isNotTheSameRoi(selectedRoi)) {
+                                lastBound = null;
+                            }
+                            if (lastBound == null) {
+                                lastBound = (Rectangle2D.Double) bounds.clone();
+                            }
+                            // TODO: FIX
+                            final double translationX = bounds.getX() - lastBound.getX();
+                            final double translationY = bounds.getY() - lastBound.getY();
+                            if (isNotTheSameBounds(bounds)) {
+                                lastBound = (Rectangle2D.Double) bounds.clone();
+                                handleMultipleRoisTranslation(translationX, translationY, roisAsArray, indices);
+                            }
+                            lastRoi = selectedRoi;
+                        }
+
+                    });
+                    return;
+                }
                 Rectangle bounds = getImagePlus().getRoi().getBounds();
                 if (!bounds.equals(oldRect)) {
                     oldRect = (Rectangle) bounds.clone();
@@ -414,35 +439,6 @@ public class MainDialog extends ImageWindow {
         }
     }
 
-    private void listenerROI() {
-        Roi.addRoiListener((imagePlus, event) -> {
-            if (event != RoiListener.MOVED) {
-                return;
-            }
-            final int[] indices = this.jListRois.getSelectedIndices();
-            // IF MORE THAN ONE IS SELECTED IN JLIST THEN APPLY TRANSLATION TO ALL AT ONCE
-            if (indices.length > 1) {
-                // FIND THE ROI THAT HAS BEEN CLICKED DIRECTLY
-                final Roi selectedRoi = imagePlus.getRoi();
-                final Rectangle2D.Double bounds = selectedRoi.getFloatBounds();
-                Roi[] roisAsArray = this.getCurrentImage().getManager().getRoisAsArray();
-                if (isNotTheSameRoi(selectedRoi)) {
-                    this.lastBound = null;
-                }
-                if (this.lastBound == null) {
-                    this.lastBound = (Rectangle2D.Double) bounds.clone();
-                }
-                final double translationX = bounds.getX() - this.lastBound.getX();
-                final double translationY = bounds.getY() - this.lastBound.getY();
-                if (isNotTheSameBounds(bounds)) {
-                    this.lastBound = (Rectangle2D.Double) bounds.clone();
-                    this.handleMultipleRoisTranslation(translationX, translationY, roisAsArray, indices);
-                }
-                this.lastRoi = selectedRoi;
-            }
-        });
-    }
-
     private boolean isNotTheSameBounds(Rectangle2D bounds) {
         return !Objects.equals(bounds, this.lastBound);
     }
@@ -457,8 +453,9 @@ public class MainDialog extends ImageWindow {
             final Roi roi = roisAsArray[index];
             final Rectangle2D.Double bounds = roi.getFloatBounds();
             roi.setLocation(bounds.x + translationX, bounds.y + translationY);
-            final Rectangle2D.Double finalBounds = roi.getFloatBounds();
-            this.jListRoisModel.set(index, MessageFormat.format("{0} - {1},{2}", index + 1, finalBounds.x, finalBounds.y));
+            final int x = (int) roi.getXBase() + (int) (roi.getFloatWidth() / 2);
+            final int y = (int) roi.getYBase() + (int) (roi.getFloatHeight() / 2);
+            this.jListRoisModel.set(index, MessageFormat.format("{0} - {1},{2}", index + 1, x, y));
         }
     }
 
@@ -537,6 +534,7 @@ public class MainDialog extends ImageWindow {
      * The window remains "closed" even if you're displaying again ( like in our use case, we have to close the main
      * dialog and open the preview dialog, so after you close the preview dialog for ImageJ WindowManager, the other window
      * is still closed  without this workaround )
+     *
      * @param e
      */
     @Override
@@ -615,8 +613,6 @@ public class MainDialog extends ImageWindow {
         });
     }
 
-
-    private boolean debounce = false;
     private class KeyboardEventDispatcher implements KeyEventDispatcher {
         @Override
         public boolean dispatchKeyEvent(KeyEvent e) {

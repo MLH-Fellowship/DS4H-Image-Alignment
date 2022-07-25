@@ -50,7 +50,9 @@ import ij.io.SaveDialog;
 import ij.plugin.frame.RoiManager;
 import loci.common.enumeration.EnumException;
 import loci.formats.UnknownFormatException;
+import org.opencv.core.Core;
 import org.opencv.core.Mat;
+import org.opencv.osgi.OpenCVInterface;
 
 import javax.swing.*;
 import java.awt.*;
@@ -87,6 +89,8 @@ public class ImageAlignment implements OnMainDialogEventListener, OnAlignDialogE
     static {
         Loader loader = new Loader();
         loader.load();
+        // Uncomment next line to get infos about the opencv libs that are loaded
+        // System.out.println(Core.getBuildInformation());
     }
 
     private List<String> tempImages = new ArrayList<>();

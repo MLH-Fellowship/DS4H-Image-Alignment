@@ -16,8 +16,7 @@ public class Loader implements LibraryLoader {
             this.resourceLoader = new WindowsDllLoader();
         }
         if (LibraryLoader.getOS().startsWith("Mac OS")) {
-            //this.resourceLoader = isARM() || !isFiji() ? new MacOsXDylibLoader() : new OldMacOsDyLibLoader();
-            this.resourceLoader = new OldMacOsDyLibLoader();
+            this.resourceLoader = isARM() || !isFiji() ? new MacOsXDylibLoader() : new OldMacOsDyLibLoader();
         }
         if (LibraryLoader.getOS().startsWith("Linux")) {
             this.resourceLoader = new LinuxOsLoader();

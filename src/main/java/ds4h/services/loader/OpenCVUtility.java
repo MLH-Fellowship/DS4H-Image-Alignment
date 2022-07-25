@@ -36,8 +36,4 @@ public interface OpenCVUtility {
     static List<String> loadLibraries(String prefix, String ext) {
         return Arrays.stream(OpenCVLibraries.values()).map(Enum::name).map(name -> getDir() + prefix + name.toLowerCase() + getVersion() + ext).collect(Collectors.toList());
     }
-
-    static List<String> loadGivenLibraries(String prefix, String ext, List<OpenCVLibraries> libraries) {
-        return libraries.stream().map(Enum::name).map(name -> getDir() + prefix + name.toLowerCase() + getVersion() + ext).collect(Collectors.toList());
-    }
 }

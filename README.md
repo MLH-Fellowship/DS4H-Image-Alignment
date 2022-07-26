@@ -18,7 +18,8 @@ DS4H Image Alignment has been implemented in Java as a plugin for ImageJ/Fiji. I
 
 ## Installation ##
 
-DS4H Image Alignment can be installed easily, on Windows and Apple Silicon M1.
+DS4H Image Alignment can be installed easily, on Windows, Linux and Apple Silicon M1 and Intel Based Mac ( Mac-ImageJ is the ARM version, Mac-Fiji is the x86 Intel version) .
+You have to download the jar from the "Releases" section in this page, just go inside the release related to your platform (e.g. v1.1.0-win is for Windows).
 
 
 ## Download ##

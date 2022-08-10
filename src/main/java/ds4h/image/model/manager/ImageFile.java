@@ -22,8 +22,8 @@ import java.util.stream.IntStream;
 
 public class ImageFile {
     private final String pathFile;
-    List<SlideImage> slideImages = new ArrayList<>();
-    List<SlideImage> imagesWholeSlide = new ArrayList<>();
+    private final List<SlideImage> slideImages = new ArrayList<>();
+    private final List<SlideImage> imagesWholeSlide = new ArrayList<>();
     private boolean reducedImageMode;
     private Dimension editorImageDimension;
     private BufferedImageReader bufferedEditorImageReader;

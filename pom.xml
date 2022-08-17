@@ -137,11 +137,17 @@
                 </exclusion>
             </exclusions>
         </dependency>
+
         <dependency>
-            <groupId>org</groupId>
+            <groupId>org.bytedeco.javacpp-presets</groupId>
             <artifactId>opencv</artifactId>
-            <version>4.5.5</version>
+            <version>4.0.1-1.4.4</version>
         </dependency>
+        <!--        <dependency>
+                    <groupId>org</groupId>
+                    <artifactId>opencv</artifactId>
+                    <version>4.5.5</version>
+                </dependency>-->
     </dependencies>
     <build>
         <plugins>

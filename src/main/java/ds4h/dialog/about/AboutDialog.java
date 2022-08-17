@@ -13,6 +13,8 @@ public class AboutDialog extends JDialog {
     private final JLabel labelAuthors = new JLabel();
     private final JLabel labelAuthor1 = new JLabel();
     private final JLabel labelAuthor2 = new JLabel();
+
+    private final JLabel labelAuthor3 = new JLabel();
     private final JLabel copyright = new JLabel();
     private final JLabel license = new JLabel();
 
@@ -58,6 +60,11 @@ public class AboutDialog extends JDialog {
         getLabelAuthors().setText("Made By");
         getLabelAuthors().setVisible(true);
         getContentPane().add(getLabelAuthors());
+        getContentPane().add(Box.createRigidArea(new Dimension(0,16)));
+
+        getLabelAuthor3().setText("Matteo Belletti - matteobellettifc@gmail.com");
+        getLabelAuthor3().setVisible(true);
+        getContentPane().add(getLabelAuthor3());
         getContentPane().add(Box.createRigidArea(new Dimension(0,16)));
 
         getLabelAuthor2().setText("Marco Edoardo Duma - marcoedoardo.duma@studio.unibo.it");
@@ -124,5 +131,9 @@ public class AboutDialog extends JDialog {
 
     public JLabel getLabelAuthor2() {
         return labelAuthor2;
+    }
+
+    public JLabel getLabelAuthor3() {
+        return labelAuthor3;
     }
 }

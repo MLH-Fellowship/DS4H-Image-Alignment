@@ -27,6 +27,8 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static javax.swing.SwingConstants.LEFT;
+
 public class MainDialog extends ImageWindow {
     private static final String DIALOG_STATIC_TITLE = "DS4H Image Alignment.";
     private static final String SCALE_OPTION = "scale";
@@ -277,7 +279,7 @@ public class MainDialog extends ImageWindow {
         btnPrevImage.setToolTipText("Select previous image in the stack");
         btnNextImage.setToolTipText("Select next image in the stack");
 
-        /*final JLabel changeImageLabel = new JLabel("Press \"A\" or \"D\" to change image", LEFT);
+        final JLabel changeImageLabel = new JLabel("Press \"N\" (next) or \"P\" (previous) to change image", LEFT);
         changeImageLabel.setForeground(Color.gray);
 
         actionsConstraints.gridx = 0;
@@ -285,7 +287,8 @@ public class MainDialog extends ImageWindow {
         actionsConstraints.fill = GridBagConstraints.BOTH;
         actionsConstraints.gridwidth = 1;
         actionsConstraints.gridheight = 1;
-        actionsJPanel.add(changeImageLabel, actionsConstraints);*/
+        actionsJPanel.add(changeImageLabel, actionsConstraints);
+
         actionsConstraints.gridx = 0;
         actionsConstraints.gridy = 0;
         actionsConstraints.fill = GridBagConstraints.BOTH;
@@ -613,6 +616,9 @@ public class MainDialog extends ImageWindow {
         });
     }
 
+    /**
+     * Sets KeyEvents
+     */
     private class KeyboardEventDispatcher implements KeyEventDispatcher {
         @Override
         public boolean dispatchKeyEvent(KeyEvent e) {
@@ -624,6 +630,30 @@ public class MainDialog extends ImageWindow {
                     debounce = true;
                     new Thread(() -> {
                         eventListener.onMainDialogEvent(new AddRoiEvent(clickCoordinates));
+                        debounce = false;
+                    }).start();
+                }
+                e.consume();
+            } else if (isReleased && e.getKeyCode() == KeyEvent.VK_P && mouseOverCanvas){
+/*                btnNextImage.addActionListener(e -> {
+                    titleHasToChange = true;
+                    this.eventListener.onMainDialogEvent(new ChangeImageEvent(ChangeImageEvent.ChangeDirection.NEXT));
+                });*/
+                if (!debounce) {
+                    debounce = true;
+                    new Thread(() -> {
+                        titleHasToChange = true;
+                        eventListener.onMainDialogEvent(new ChangeImageEvent(ChangeImageEvent.ChangeDirection.PREV));
+                        debounce = false;
+                    }).start();
+                }
+                e.consume();
+            } else if (isReleased && e.getKeyCode() == KeyEvent.VK_N && mouseOverCanvas){
+                if (!debounce) {
+                    debounce = true;
+                    new Thread(() -> {
+                        titleHasToChange = true;
+                        eventListener.onMainDialogEvent(new ChangeImageEvent(ChangeImageEvent.ChangeDirection.NEXT));
                         debounce = false;
                     }).start();
                 }

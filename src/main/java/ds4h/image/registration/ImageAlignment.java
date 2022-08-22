@@ -50,9 +50,7 @@ import ij.io.SaveDialog;
 import ij.plugin.frame.RoiManager;
 import loci.common.enumeration.EnumException;
 import loci.formats.UnknownFormatException;
-import org.opencv.core.Core;
 import org.opencv.core.Mat;
-import org.opencv.osgi.OpenCVInterface;
 
 import javax.swing.*;
 import java.awt.*;
@@ -403,8 +401,8 @@ public class ImageAlignment implements OnMainDialogEventListener, OnAlignDialogE
         } catch (Exception e) {
             IJ.showMessage(e.getMessage());
         }
-        this.getMainDialog().setPrevImageButtonEnabled(this.getEditor().hasPrevious());
-        this.getMainDialog().setNextImageButtonEnabled(this.getEditor().hasNext());
+        this.getMainDialog().setPrevImageButtonEnabled(true);
+        this.getMainDialog().setNextImageButtonEnabled(true);
         this.getMainDialog().setTitle(MessageFormat.format(MAIN_DIALOG_TITLE_PATTERN, this.getEditor().getCurrentPosition() + 1, this.getEditor().getAllImagesCounterSum()));
         this.refreshRoiGUI();
     }
@@ -558,17 +556,23 @@ public class ImageAlignment implements OnMainDialogEventListener, OnAlignDialogE
         if (isNext || isPrevious) {
             this.getLoadingDialog().hideDialog();
         }
-        if (dialogEvent.getChangeDirection() == ChangeImageEvent.ChangeDirection.NEXT) {
+        if ((dialogEvent.getChangeDirection() == ChangeImageEvent.ChangeDirection.NEXT) && this.getEditor().hasNext()) {
             this.getEditor().next();
-        } else {
+        } else if ((dialogEvent.getChangeDirection() == ChangeImageEvent.ChangeDirection.NEXT) && !this.getEditor().hasNext()){
             this.getEditor().previous();
+        } else if ((dialogEvent.getChangeDirection() == ChangeImageEvent.ChangeDirection.PREV) && this.getEditor().hasPrevious()) {
+            this.getEditor().previous();
+        } else {
+            this.getEditor().next();
         }
 
         if (this.getEditor().getCurrentImage() != null) {
             SwingUtilities.invokeLater(() -> {
                 this.getMainDialog().changeImage(this.getEditor().getCurrentImage());
-                this.getMainDialog().setPrevImageButtonEnabled(this.getEditor().hasPrevious());
-                this.getMainDialog().setNextImageButtonEnabled(this.getEditor().hasNext());
+//                this.getMainDialog().setPrevImageButtonEnabled(this.getEditor().hasPrevious());
+//                this.getMainDialog().setNextImageButtonEnabled(this.getEditor().hasNext());
+                this.getMainDialog().setPrevImageButtonEnabled(true);
+                this.getMainDialog().setNextImageButtonEnabled(true);
                 this.getMainDialog().setTitle(MessageFormat.format(MAIN_DIALOG_TITLE_PATTERN, this.getEditor().getCurrentPosition() + 1, this.getEditor().getAllImagesCounterSum()));
                 this.getLoadingDialog().hideDialog();
                 this.refreshRoiGUI();
@@ -586,8 +590,8 @@ public class ImageAlignment implements OnMainDialogEventListener, OnAlignDialogE
                     WindowManager.setCurrentWindow(this.getMainDialog());
                     WindowManager.getCurrentWindow().getCanvas().fitToWindow();
                     this.getMainDialog().setVisible(true);
-                    this.getMainDialog().setPrevImageButtonEnabled(this.getEditor().hasPrevious());
-                    this.getMainDialog().setNextImageButtonEnabled(this.getEditor().hasNext());
+                    this.getMainDialog().setPrevImageButtonEnabled(true);
+                    this.getMainDialog().setNextImageButtonEnabled(true);
                     this.getMainDialog().setTitle(MessageFormat.format(MAIN_DIALOG_TITLE_PATTERN, this.getEditor().getCurrentPosition() + 1, this.getEditor().getAllImagesCounterSum()));
                 });
                 return;
@@ -664,8 +668,8 @@ public class ImageAlignment implements OnMainDialogEventListener, OnAlignDialogE
                 if (this.getEditor().getAllImagesCounterSum() < finalIndex && this.getEditor().getCurrentPosition() == this.getEditor().getAllImagesCounterSum()) {
                     finalIndex = this.getEditor().getAllImagesCounterSum();
                 }
-                this.getMainDialog().setPrevImageButtonEnabled(finalIndex > 1 && this.getEditor().getCurrentPosition() != 0);
-                this.getMainDialog().setNextImageButtonEnabled(getEditor().hasNext());
+                this.getMainDialog().setPrevImageButtonEnabled(true);
+                this.getMainDialog().setNextImageButtonEnabled(true);
                 this.getMainDialog().setTitle(MessageFormat.format(MAIN_DIALOG_TITLE_PATTERN, finalIndex, this.getEditor().getAllImagesCounterSum()));
                 this.refreshRoiGUI();
                 this.getRemoveImageDialog().dispose();
@@ -714,8 +718,8 @@ public class ImageAlignment implements OnMainDialogEventListener, OnAlignDialogE
             this.editor.addPropertyChangeListener(this);
             this.getEditor().next();
             this.mainDialog = new MainDialog(this.getEditor().getCurrentImage(), this);
-            this.getMainDialog().setPrevImageButtonEnabled(this.getEditor().hasPrevious());
-            this.getMainDialog().setNextImageButtonEnabled(this.getEditor().hasNext());
+            this.getMainDialog().setPrevImageButtonEnabled(true);
+            this.getMainDialog().setNextImageButtonEnabled(true);
             this.getMainDialog().setTitle(MessageFormat.format(MAIN_DIALOG_TITLE_PATTERN, this.getEditor().getCurrentPosition() + 1, this.getEditor().getAllImagesCounterSum()));
             this.getMainDialog().setAutoAlignButtonEnabled(this.getEditor().getAllImagesCounterSum() > 1);
             this.getLoadingDialog().hideDialog();

@@ -634,7 +634,9 @@ public class MainDialog extends ImageWindow {
                     }).start();
                 }
                 e.consume();
-            } else if (isReleased && e.getKeyCode() == KeyEvent.VK_P && mouseOverCanvas){
+//             I removed mouseOverCanvas for previous or next image request, as it seems more user friendly
+//            } else if (isReleased && e.getKeyCode() == KeyEvent.VK_P && mouseOverCanvas){
+            } else if (isReleased && e.getKeyCode() == KeyEvent.VK_P){
 /*                btnNextImage.addActionListener(e -> {
                     titleHasToChange = true;
                     this.eventListener.onMainDialogEvent(new ChangeImageEvent(ChangeImageEvent.ChangeDirection.NEXT));
@@ -648,7 +650,8 @@ public class MainDialog extends ImageWindow {
                     }).start();
                 }
                 e.consume();
-            } else if (isReleased && e.getKeyCode() == KeyEvent.VK_N && mouseOverCanvas){
+//            } else if (isReleased && e.getKeyCode() == KeyEvent.VK_N && mouseOverCanvas){
+            } else if (isReleased && e.getKeyCode() == KeyEvent.VK_N){
                 if (!debounce) {
                     debounce = true;
                     new Thread(() -> {

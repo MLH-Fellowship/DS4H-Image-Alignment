@@ -64,6 +64,8 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.MathContext;
 import java.text.MessageFormat;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -668,7 +670,8 @@ public class ImageAlignment implements OnMainDialogEventListener, OnAlignDialogE
         for(int i = 0; i < nPages; i++){
             System.out.println("In for loop");
             //we decide the name
-            String filePath = IJ.getDir("temp") + "file"+ i + TIFF_EXT;
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd-HH-mm-ss");
+            String filePath = IJ.getDir("temp") + LocalDateTime.now().format(formatter) + "_file"+ i + TIFF_EXT;
             File file = new File(filePath);
             ImageIO.write(reader.read(i), "TIFF", file);
             System.out.println("image save to " + filePath);

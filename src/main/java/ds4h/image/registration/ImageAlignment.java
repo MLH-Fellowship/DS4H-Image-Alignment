@@ -52,6 +52,9 @@ import loci.common.enumeration.EnumException;
 import loci.formats.UnknownFormatException;
 import org.opencv.core.Mat;
 
+import javax.imageio.ImageIO;
+import javax.imageio.ImageReader;
+import javax.imageio.stream.ImageInputStream;
 import javax.swing.*;
 import java.awt.*;
 import java.beans.PropertyChangeEvent;
@@ -613,7 +616,7 @@ public class ImageAlignment implements OnMainDialogEventListener, OnAlignDialogE
     }
 
     @Override
-    public void onAlignDialogEventListener(IAlignDialogEvent dialogEvent) {
+    public void onAlignDialogEventListener(IAlignDialogEvent dialogEvent) throws IOException {
         if (dialogEvent instanceof SaveEvent) {
             SaveDialog saveDialog = new SaveDialog("Save as", "aligned", TIFF_EXT);
             if (saveDialog.getFileName() == null) {
@@ -629,8 +632,49 @@ public class ImageAlignment implements OnMainDialogEventListener, OnAlignDialogE
 
         if (dialogEvent instanceof ReuseImageEvent) {
             this.disposeAll();
-            this.initialize(Collections.singletonList(this.getTempImages().get(this.getTempImages().size() - 1)));
+            //in the new initialize, getSplitTIFFImages is called, which separates the TIFF file with the
+            // aligned images into single TIFF files
+            //this.initialize(Collections.singletonList(this.getTempImages().get(this.getTempImages().size() - 1)));
+            this.initialize(getSplitTIFFImages(this.getTempImages().get(this.getTempImages().size() - 1)));
         }
+    }
+
+    /**
+     *
+     * @param imagePath  the path to a TIFF file with aligned images
+     * @return           a list with the path of single TIFF files obtained from the imagePath
+     * @throws IOException
+     */
+    private List<String> getSplitTIFFImages(String imagePath) throws IOException {
+        List<String> list = new ArrayList<>();
+        System.out.println("in getSplitTIFFImages function");
+        int nPages = 0;
+        System.out.println("before inputstream");
+        ImageInputStream is = ImageIO.createImageInputStream(new File(imagePath));
+        if (is == null || is.length() == 0){
+            // handle error
+        }
+        Iterator<ImageReader> iterator = ImageIO.getImageReaders(is);
+//        if (iterator == null || !iterator.hasNext()) {
+//            throw new IOException("Image file format not supported by ImageIO: " + imagePath);
+//        }
+        // We are just looking for the first reader compatible:
+        System.out.println("before iterator.next");
+        ImageReader reader = (ImageReader) iterator.next();
+        iterator = null;
+        reader.setInput(is);
+        //get the number of pages
+        nPages = reader.getNumImages(true);
+        for(int i = 0; i < nPages; i++){
+            System.out.println("In for loop");
+            //we decide the name
+            String filePath = IJ.getDir("temp") + "file"+ i + TIFF_EXT;
+            File file = new File(filePath);
+            ImageIO.write(reader.read(i), "TIFF", file);
+            System.out.println("image save to " + filePath);
+            list.add(filePath);
+        }
+        return list;
     }
 
     @Override

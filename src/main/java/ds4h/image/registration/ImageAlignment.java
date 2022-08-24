@@ -564,10 +564,18 @@ public class ImageAlignment implements OnMainDialogEventListener, OnAlignDialogE
         if ((dialogEvent.getChangeDirection() == ChangeImageEvent.ChangeDirection.NEXT) && this.getEditor().hasNext()) {
             this.getEditor().next();
         } else if ((dialogEvent.getChangeDirection() == ChangeImageEvent.ChangeDirection.NEXT) && !this.getEditor().hasNext()){
+            //in this case it gets to the first image in order to loop the imageslider
+            while(this.getEditor().hasPrevious()){
+                this.getEditor().previous();
+            }
             this.getEditor().previous();
         } else if ((dialogEvent.getChangeDirection() == ChangeImageEvent.ChangeDirection.PREV) && this.getEditor().hasPrevious()) {
             this.getEditor().previous();
         } else {
+            //in this case it gets to the last image in order to loop the imageslider
+            while(this.getEditor().hasNext()){
+                this.getEditor().next();
+            }
             this.getEditor().next();
         }
 

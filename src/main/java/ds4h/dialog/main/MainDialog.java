@@ -279,7 +279,7 @@ public class MainDialog extends ImageWindow {
         btnPrevImage.setToolTipText("Select previous image in the stack");
         btnNextImage.setToolTipText("Select next image in the stack");
 
-        final JLabel changeImageLabel = new JLabel("Press \"N\" (next) or \"P\" (previous) to change image", LEFT);
+        final JLabel changeImageLabel = new JLabel("Press \"P\" or \"N\" to change image", LEFT);
         changeImageLabel.setForeground(Color.gray);
 
         actionsConstraints.gridx = 0;

@@ -164,6 +164,7 @@ public abstract class AbstractBuilder<T> implements AlignBuilder {
         return this.maximumSize;
     }
 
+    //takes input dimension and check if maximumSize needs to be updated
     protected void setMaximumSize(Dimension maximumSize) {
         for (int i = 0; i < this.getImagesDimensions().size(); i++) {
             Dimension dimension = this.getImagesDimensions().get(i);

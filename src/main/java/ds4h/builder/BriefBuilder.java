@@ -64,6 +64,7 @@ public class BriefBuilder extends AbstractBuilder<Mat> {
     public void init() {
         this.importImages();
         this.setImagesDimensions(this.getEditor().getImagesDimensions());
+        //empty Dimension, this """setMaximumSize""" simply checks if the current maximumSize needs to be updated
         this.setMaximumSize(new Dimension());
         this.setFinalStack(new Dimension(this.getMaximumSize().width, this.getMaximumSize().height));
         this.cacheTransformedImages();
@@ -121,6 +122,7 @@ public class BriefBuilder extends AbstractBuilder<Mat> {
         try {
             for (int index = 0; index < this.getImages().size(); index++) {
                 if (index == this.getSourceImageIndex()) continue;
+                //take a single transformed image
                 Mat image = this.getTransformedImages().get(index);
                 if (image == null) continue;
                 ImageProcessor newProcessor = new ColorProcessor(this.getFinalStack().width, this.getMaximumSize().height);
@@ -130,6 +132,7 @@ public class BriefBuilder extends AbstractBuilder<Mat> {
                     offsetXTransformed = Math.abs(this.getOffsetsX().get(index));
                 }
                 offsetXTransformed += this.getMaxOffsetX();
+                //down here images aligned are modified, real deal it's in this two lines
                 newProcessor.insert(transformedImage.getProcessor(), offsetXTransformed, this.getMaxOffsetY());
                 this.addToVirtualStack(new ImagePlus("", newProcessor));
             }
@@ -242,6 +245,10 @@ public class BriefBuilder extends AbstractBuilder<Mat> {
         return bp;
     }
 
+    /**
+     *
+     * imports the images from editor into the builder
+     */
     private void importImages() {
         for (ImageFile imageFile : this.getEditor().getImageFiles()) {
             try {

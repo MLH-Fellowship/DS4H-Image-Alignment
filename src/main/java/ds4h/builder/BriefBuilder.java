@@ -51,7 +51,6 @@ import static org.opencv.imgproc.Imgproc.boundingRect;
 public class BriefBuilder extends AbstractBuilder<Mat> {
     private final List<Mat> images = new ArrayList<>();
     private final Map<Long, String> pathMap = new HashMap<>();
-
     private final Map<Pair<Integer, Integer>, Pair<List<Point>, List<Point>>> mapOfPoints = new HashMap<>();
     private final List<Mat> transformedImages = new ArrayList<>();
     private boolean canGo = true;
@@ -88,8 +87,8 @@ public class BriefBuilder extends AbstractBuilder<Mat> {
             Imgproc.findContours(mat, contours, hierarchy, Imgproc.RETR_LIST, Imgproc.CHAIN_APPROX_SIMPLE);
             contours.forEach(contour -> {
                 Rect rect = boundingRect(contour);
-                this.getFinalStack().height = Math.max(this.getFinalStack().height, rect.height);
-                this.getFinalStack().width = Math.max(this.getFinalStack().width, rect.width);
+                this.getFinalStack().height = Math.max(this.getFinalStack().height, rect.height*2);
+                this.getFinalStack().width = Math.max(this.getFinalStack().width, rect.width*2);
             });
         });
     }
@@ -127,6 +126,7 @@ public class BriefBuilder extends AbstractBuilder<Mat> {
                 if (image == null) continue;
                 ImageProcessor newProcessor = new ColorProcessor(this.getFinalStack().width, this.getMaximumSize().height);
                 ImagePlus transformedImage = this.matToImagePlus(image);
+                //transformedImage = transformedImage.
                 int offsetXTransformed = 0;
                 if (this.getOffsetsX().get(index) > 0 && this.getMaxOffsetXIndex() != index) {
                     offsetXTransformed = Math.abs(this.getOffsetsX().get(index));
@@ -188,7 +188,7 @@ public class BriefBuilder extends AbstractBuilder<Mat> {
             final Mat perspectiveM = Imgproc.getPerspectiveTransform(points, dest);
             Mat warpedImage = new Mat();
             // Literally takes the secondImage, the perspective transformation matrix, the size of the first image, then warps the second image to fit the first, at least that's what I think is happening
-            Imgproc.warpPerspective(secondImage, warpedImage, perspectiveM, new Size(this.getFinalStack().width, this.getMaximumSize().height), Imgproc.WARP_INVERSE_MAP, Core.BORDER_CONSTANT);
+            Imgproc.warpPerspective(secondImage, warpedImage, perspectiveM, new Size(this.getFinalStack().width*2, this.getMaximumSize().height*2), Imgproc.WARP_INVERSE_MAP, Core.BORDER_CONSTANT);
             // not the nicest solution, but obviously the image's data address changes after but the image it's the same, so to retrieve the same path I had to do this
             this.replaceKey(secondImage.dataAddr(), warpedImage.dataAddr());
             // then to all the things need to create a virtual stack of images
@@ -341,5 +341,15 @@ public class BriefBuilder extends AbstractBuilder<Mat> {
 
     public List<Mat> getImages() {
         return images;
+    }
+
+    private Size getFinalSize(){
+        Size size = new Size(0,0);
+        for(Mat img: getTransformedImages()){
+            //method to find the max extension of aligned images while keeping all pixels
+            //this will be used to adapt the output of automatic alignment, when keep all pixel data is activated
+            // in order to not cut the images.
+        }
+        return size;
     }
 }

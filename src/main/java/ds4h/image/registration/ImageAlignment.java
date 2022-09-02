@@ -642,9 +642,10 @@ public class ImageAlignment implements OnMainDialogEventListener, OnAlignDialogE
 
         if (dialogEvent instanceof ReuseImageEvent) {
             this.disposeAll();
-            //in the new initialize, getSplitTIFFImages is called, which separates the TIFF file with the
-            // aligned images into single TIFF files
+            //previous solution commented
             //this.initialize(Collections.singletonList(this.getTempImages().get(this.getTempImages().size() - 1)));
+            //in the new initialize, getSplitTIFFImages is called, which separates the TIFF file with the
+            //aligned images into single TIFF files. To do this, it utilizes the getTempImages where they are stored.
             this.initialize(getSplitTIFFImages(this.getTempImages().get(this.getTempImages().size() - 1)));
         }
     }
@@ -657,19 +658,13 @@ public class ImageAlignment implements OnMainDialogEventListener, OnAlignDialogE
      */
     private List<String> getSplitTIFFImages(String imagePath) throws IOException {
         List<String> list = new ArrayList<>();
-        System.out.println("in getSplitTIFFImages function");
         int nPages = 0;
-        System.out.println("before inputstream");
         ImageInputStream is = ImageIO.createImageInputStream(new File(imagePath));
         if (is == null || is.length() == 0){
             // handle error
         }
         Iterator<ImageReader> iterator = ImageIO.getImageReaders(is);
-//        if (iterator == null || !iterator.hasNext()) {
-//            throw new IOException("Image file format not supported by ImageIO: " + imagePath);
-//        }
         // We are just looking for the first reader compatible:
-        System.out.println("before iterator.next");
         ImageReader reader = (ImageReader) iterator.next();
         iterator = null;
         reader.setInput(is);

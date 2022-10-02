@@ -19,7 +19,6 @@ import ij.IJ;
 import ij.ImagePlus;
 import ij.VirtualStack;
 import ij.process.ByteProcessor;
-import ij.process.ColorProcessor;
 import ij.process.ImageProcessor;
 import org.opencv.calib3d.Calib3d;
 import org.opencv.core.Point;
@@ -135,6 +134,11 @@ public class BriefBuilder extends AbstractBuilder<Mat> {
     @Override
     public void alignKeepOriginal() {
         System.out.println("CALL alignKeepOriginal");
+        // all of the following commented code is a mess. it was supposed to do the keep all pixel data part,
+        // by dynamically adapt the size of the imageProcessor, but overcomplicated it with wrongly done offsets.
+        // this wrong algorithm created a black band in the left part of the stack in frequent cases,
+        // causing my dynamic adaptation to be in vain.
+/*        this.setSourceImageIndex(0);
         try {
             for (int index = 0; index < this.getImages().size(); index++) {
                 if (index == this.getSourceImageIndex()) continue;
@@ -160,6 +164,17 @@ public class BriefBuilder extends AbstractBuilder<Mat> {
             }
         } catch (Exception e) {
             IJ.showMessage("Not all the images will be put in the aligned stack, something went wrong, check your image because it seems that we couldn't find a relation: " + e.getMessage());
+        }*/
+        System.out.println("CALL align");
+        System.out.println("Max offsets in transformImage are: " + getMaxOffsetX() + " " + getMaxOffsetY());
+        this.setSourceImageIndex(0);
+        this.setVirtualStack(new VirtualStack(getSourceImage().width() + (int) getAbsMaxValue(), getSourceImage().height(), ColorModel.getRGBdefault(), IJ.getDir(TEMP_PATH)));
+        this.addToVirtualStack(matToImagePlus(getSourceImage()));
+        for (int index = 1; index < this.getImages().size(); index++) {
+            Mat image = transformImage(index);
+            if (image == null) continue;
+            ImagePlus transformedImage = this.matToImagePlus(image);
+            this.addToVirtualStack(transformedImage);
         }
     }
 

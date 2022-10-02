@@ -552,15 +552,19 @@ public class ImageAlignment implements OnMainDialogEventListener, OnAlignDialogE
         });
     }
 
+    /**
+     * Changes displayed image handling ChangeImageEvent
+     * @param dialogEvent accepted params are 'ChangeImageEvent.ChangeDirection.NEXT' and 'ChangeImageEvent.ChangeDirection.NEXT'
+     */
     private void getChangeImageThread(ChangeImageEvent dialogEvent) {
         if (this.getEditor().getCurrentImage() != null) {
             this.getMainDialog().removeMouseListener();
         }
-        boolean isNext = dialogEvent.getChangeDirection() == ChangeImageEvent.ChangeDirection.NEXT && !this.getEditor().hasNext();
-        boolean isPrevious = dialogEvent.getChangeDirection() == ChangeImageEvent.ChangeDirection.PREV && !this.getEditor().hasPrevious();
-        if (isNext || isPrevious) {
-            this.getLoadingDialog().hideDialog();
-        }
+//        boolean isNext = dialogEvent.getChangeDirection() == ChangeImageEvent.ChangeDirection.NEXT && !this.getEditor().hasNext();
+//        boolean isPrevious = dialogEvent.getChangeDirection() == ChangeImageEvent.ChangeDirection.PREV && !this.getEditor().hasPrevious();
+//        if (isNext || isPrevious) {
+//            this.getLoadingDialog().hideDialog();
+//        }
         if ((dialogEvent.getChangeDirection() == ChangeImageEvent.ChangeDirection.NEXT) && this.getEditor().hasNext()) {
             this.getEditor().next();
         } else if ((dialogEvent.getChangeDirection() == ChangeImageEvent.ChangeDirection.NEXT) && !this.getEditor().hasNext()){
@@ -568,7 +572,7 @@ public class ImageAlignment implements OnMainDialogEventListener, OnAlignDialogE
             while(this.getEditor().hasPrevious()){
                 this.getEditor().previous();
             }
-            this.getEditor().previous();
+            //this.getEditor().previous();
         } else if ((dialogEvent.getChangeDirection() == ChangeImageEvent.ChangeDirection.PREV) && this.getEditor().hasPrevious()) {
             this.getEditor().previous();
         } else {
@@ -576,7 +580,7 @@ public class ImageAlignment implements OnMainDialogEventListener, OnAlignDialogE
             while(this.getEditor().hasNext()){
                 this.getEditor().next();
             }
-            this.getEditor().next();
+            //this.getEditor().next();
         }
 
         if (this.getEditor().getCurrentImage() != null) {
@@ -671,13 +675,11 @@ public class ImageAlignment implements OnMainDialogEventListener, OnAlignDialogE
         //get the number of pages
         nPages = reader.getNumImages(true);
         for(int i = 0; i < nPages; i++){
-            System.out.println("In for loop");
             //we decide the name
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd-HH-mm-ss");
             String filePath = IJ.getDir("temp") + LocalDateTime.now().format(formatter) + "_file"+ i + TIFF_EXT;
             File file = new File(filePath);
             ImageIO.write(reader.read(i), "TIFF", file);
-            System.out.println("image save to " + filePath);
             list.add(filePath);
         }
         return list;

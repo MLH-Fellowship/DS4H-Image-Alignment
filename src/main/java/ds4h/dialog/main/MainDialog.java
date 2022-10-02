@@ -240,6 +240,7 @@ public class MainDialog extends ImageWindow {
         checkKeepOriginal.setEnabled(false);
 
         btnAlignImages.addActionListener(e -> this.eventListener.onMainDialogEvent(new AlignEvent(checkKeepOriginal.isSelected())));
+        System.out.println("checkKeepOriginal initial value in MainDialog is: " + checkKeepOriginal.isSelected());
         btnAutoAlignImages.addActionListener(e -> this.eventListener.onMainDialogEvent(new AutoAlignEvent(checkKeepOriginal.isSelected())));
 
         alignConstraints.gridx = 0;

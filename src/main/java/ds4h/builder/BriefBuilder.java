@@ -12,8 +12,8 @@ package ds4h.builder;
 import ds4h.dialog.align.OnAlignDialogEventListener;
 import ds4h.dialog.loading.LoadingDialog;
 import ds4h.dialog.main.event.AutoAlignEvent;
-import ds4h.image.model.manager.ImagesEditor;
 import ds4h.image.model.manager.ImageFile;
+import ds4h.image.model.manager.ImagesEditor;
 import ds4h.utils.Pair;
 import ij.IJ;
 import ij.ImagePlus;
@@ -34,6 +34,7 @@ import java.awt.image.ColorModel;
 import java.util.List;
 import java.util.*;
 
+import static java.lang.Math.abs;
 import static org.opencv.core.CvType.CV_8U;
 import static org.opencv.core.CvType.CV_8UC1;
 import static org.opencv.imgcodecs.Imgcodecs.IMREAD_GRAYSCALE;
@@ -41,6 +42,8 @@ import static org.opencv.imgcodecs.Imgcodecs.imreadmulti;
 import static org.opencv.imgproc.Imgproc.boundingRect;
 
 /**
+ * BriefBuilder is a class implementing the automatic alignment functionality extending abstract builder
+ *
  * This plugin is made as a non-profit utility
  * It uses XFeatures2d features like BriefDescriptorExtractor and StartDetector
  * Given that is used in the medical research field and no kind of profit is made from this
@@ -55,6 +58,9 @@ public class BriefBuilder extends AbstractBuilder<Mat> {
     private final List<Mat> transformedImages = new ArrayList<>();
     private boolean canGo = true;
 
+    // TOCHECK, TOBETESTED
+    private double absMaxValue = 0.0;
+
     public BriefBuilder(LoadingDialog loadingDialog, ImagesEditor editor, AutoAlignEvent event, OnAlignDialogEventListener listener) {
         super(loadingDialog, listener, editor, event);
     }
@@ -65,7 +71,7 @@ public class BriefBuilder extends AbstractBuilder<Mat> {
         this.setImagesDimensions(this.getEditor().getImagesDimensions());
         //empty Dimension, this """setMaximumSize""" simply checks if the current maximumSize needs to be updated
         this.setMaximumSize(new Dimension());
-        this.setFinalStack(new Dimension(this.getMaximumSize().width, this.getMaximumSize().height));
+        this.setFinalStackDimension(new Dimension(this.getMaximumSize().width, this.getMaximumSize().height));
         this.cacheTransformedImages();
         if (this.getTransformedImages().isEmpty()) {
             canGo = false;
@@ -80,23 +86,33 @@ public class BriefBuilder extends AbstractBuilder<Mat> {
     }
 
     private void findContoursOfTransformedImages() {
-        this.getFinalStack().height = 0; // not nice, but it works
+        System.out.println("CALL findContoursOfTransformedImages");
+        System.out.println("Max offsets in findContoursOfTransformedImages are: " + getMaxOffsetX() + " " + getMaxOffsetY());
+        this.getFinalStackDimension().height = 0; // not nice, but it works
         this.getTransformedImages().forEach(mat -> {
             List<MatOfPoint> contours = new ArrayList<>();
             Mat hierarchy = new Mat();
+            //calculates contours of the images
             Imgproc.findContours(mat, contours, hierarchy, Imgproc.RETR_LIST, Imgproc.CHAIN_APPROX_SIMPLE);
             contours.forEach(contour -> {
                 Rect rect = boundingRect(contour);
-                this.getFinalStack().height = Math.max(this.getFinalStack().height, rect.height*2);
-                this.getFinalStack().width = Math.max(this.getFinalStack().width, rect.width*2);
+                this.getFinalStackDimension().height = Math.max(this.getFinalStackDimension().height, rect.height);
+                this.getFinalStackDimension().width = Math.max(this.getFinalStackDimension().width, rect.width);
             });
+            // TOCHECK, TOBETESTED
+            // note if you add 450 pixels here, you get twice as big enlargement in the final stack.. why? with '/2' is
+            // brutally fixed
+            // with more than 2 images to be aligned you get a black band on the left of the stack.
+            this.getFinalStackDimension().width = this.getFinalStackDimension().width + (int) this.getAbsMaxValue()/2;
         });
     }
 
     @Override
     protected ImageProcessor getFinalStackImageProcessor() {
+        System.out.println("CALL getFinalStackImageProcessor");
+        System.out.println("Max offsets in transformImage are: " + getMaxOffsetX() + " " + getMaxOffsetY());
         final ImageProcessor processor;
-        processor = matToImagePlus(this.getSourceImage()).getProcessor().createProcessor(this.getFinalStack().width, this.getFinalStack().height);
+        processor = matToImagePlus(this.getSourceImage()).getProcessor().createProcessor(this.getFinalStackDimension().width, this.getFinalStackDimension().height);
         processor.insert(matToImagePlus(this.getSourceImage()).getProcessor(), this.getMaxOffsetX(), this.getMaxOffsetY());
         return processor;
     }
@@ -118,21 +134,27 @@ public class BriefBuilder extends AbstractBuilder<Mat> {
 
     @Override
     public void alignKeepOriginal() {
+        System.out.println("CALL alignKeepOriginal");
         try {
             for (int index = 0; index < this.getImages().size(); index++) {
                 if (index == this.getSourceImageIndex()) continue;
                 //take a single transformed image
                 Mat image = this.getTransformedImages().get(index);
                 if (image == null) continue;
-                ImageProcessor newProcessor = new ColorProcessor(this.getFinalStack().width, this.getMaximumSize().height);
+                System.out.println("final stack width in alignKeepOriginal(): " + this.getFinalStackDimension().width);
+                System.out.println("final stack height in alignKeepOriginal(): " + this.getFinalStackDimension().height);
+                ImageProcessor newProcessor = new ColorProcessor(this.getFinalStackDimension().width, this.getMaximumSize().height);
                 ImagePlus transformedImage = this.matToImagePlus(image);
                 //transformedImage = transformedImage.
                 int offsetXTransformed = 0;
                 if (this.getOffsetsX().get(index) > 0 && this.getMaxOffsetXIndex() != index) {
-                    offsetXTransformed = Math.abs(this.getOffsetsX().get(index));
+                    offsetXTransformed = abs(this.getOffsetsX().get(index));
+                    System.out.println("transformed image offset in alignKeepOriginal(): " + offsetXTransformed);
                 }
                 offsetXTransformed += this.getMaxOffsetX();
+                System.out.println("transformed image offsetXTransformed in alignKeepOriginal(): " + offsetXTransformed);
                 //down here images aligned are modified, real deal it's in this two lines
+                //newProcessor provides image handling, it gets filled with the information and then passed to the stack
                 newProcessor.insert(transformedImage.getProcessor(), offsetXTransformed, this.getMaxOffsetY());
                 this.addToVirtualStack(new ImagePlus("", newProcessor));
             }
@@ -143,6 +165,8 @@ public class BriefBuilder extends AbstractBuilder<Mat> {
 
     @Override
     public void align() {
+        System.out.println("CALL align");
+        System.out.println("Max offsets in transformImage are: " + getMaxOffsetX() + " " + getMaxOffsetY());
         this.setSourceImageIndex(0);
         this.setVirtualStack(new VirtualStack(getSourceImage().width(), getSourceImage().height(), ColorModel.getRGBdefault(), IJ.getDir(TEMP_PATH)));
         this.addToVirtualStack(matToImagePlus(getSourceImage()));
@@ -154,7 +178,9 @@ public class BriefBuilder extends AbstractBuilder<Mat> {
         }
     }
 
+    // here the algorithm is applied to align (transform) the image
     private Mat transformImage(int transformedImageIndex) {
+        System.out.println("CALL transformImage");
         // two images
         final Mat firstImage = this.getSourceImage();
         final Mat secondImage = this.getImages().get(transformedImageIndex);
@@ -186,9 +212,32 @@ public class BriefBuilder extends AbstractBuilder<Mat> {
             // Check directly the Javadoc, to learn more
             Core.perspectiveTransform(points, dest, this.getHomography(goodMatches, firstKeyPoints.toList(), secondKeyPoints.toList(), transformedImageIndex));
             final Mat perspectiveM = Imgproc.getPerspectiveTransform(points, dest);
+            System.out.println("perspectiveM.width: " + perspectiveM.width());
+            System.out.println("perspectiveM.height: " + perspectiveM.height());
+            System.out.println("perspectiveM.size: " + perspectiveM.size());
+            // TOCHECK, TOBETESTED (BEGINS)
+            // with this function you can get min and max value of a Mat object
+            Core.MinMaxLocResult minMaxLoc = Core.minMaxLoc(perspectiveM);
+            // we get the max absolute value between minVal and maxVal which corresponds to how much larger the
+            // transformed (aligned) image should be not to lose information.
+            double absMaxVal = Math.max(abs(minMaxLoc.maxVal),abs(minMaxLoc.minVal));
+            System.out.println("Max value in the transformation matrix is: " + absMaxVal);
+            if(absMaxVal==1){
+                absMaxVal = 0.0;
+            }
+            if(this.getAbsMaxValue() < absMaxVal){
+                this.setAbsMaxValue(absMaxVal);
+            }
+            System.out.println(perspectiveM.dump());
+            // TOCHECK, TOBETESTED (ENDS)
             Mat warpedImage = new Mat();
             // Literally takes the secondImage, the perspective transformation matrix, the size of the first image, then warps the second image to fit the first, at least that's what I think is happening
-            Imgproc.warpPerspective(secondImage, warpedImage, perspectiveM, new Size(this.getFinalStack().width*2, this.getMaximumSize().height*2), Imgproc.WARP_INVERSE_MAP, Core.BORDER_CONSTANT);
+            System.out.println("Max offsets in transformImage are: " + getMaxOffsetX() + " " + getMaxOffsetY());
+            // down here the max offset should be added to size (width and height), but it is yet to be calculated:
+            // it is to be found a way to calculate it before.
+            // TOCHECK, TOBETESTED
+            Imgproc.warpPerspective(secondImage, warpedImage, perspectiveM, new Size(this.getFinalStackDimension().width+absMaxVal, this.getMaximumSize().height), Imgproc.WARP_INVERSE_MAP, Core.BORDER_CONSTANT);
+            //Imgproc.warpPerspective(secondImage, warpedImage, perspectiveM, new Size(this.getFinalStackDimension().width*2, this.getMaximumSize().height), Imgproc.WARP_INVERSE_MAP, Core.BORDER_CONSTANT);
             // not the nicest solution, but obviously the image's data address changes after but the image it's the same, so to retrieve the same path I had to do this
             this.replaceKey(secondImage.dataAddr(), warpedImage.dataAddr());
             // then to all the things need to create a virtual stack of images
@@ -197,6 +246,8 @@ public class BriefBuilder extends AbstractBuilder<Mat> {
         return null;
     }
 
+    // here you get the homography matrix (matches between images as input, matrix indicating translation as output)
+    // which is used in transformImage
     private Mat getHomography(List<DMatch> goodMatches, List<KeyPoint> firstKeyPoints, List<KeyPoint> secondKeyPoints, int indexTransformedImage) {
         final List<Point> obj = new ArrayList<>();
         final List<Point> scene = new ArrayList<>();
@@ -215,6 +266,11 @@ public class BriefBuilder extends AbstractBuilder<Mat> {
         return Calib3d.findHomography(objMat, sceneMat, Calib3d.RANSAC, briefThreshold);
     }
 
+    /**
+     *
+     * @param firstImage Input image
+     * @return array of Point containing the coordinates of the 4 corners of the image
+     */
     private Point[] getPointsArray(Mat firstImage) {
         final Point[] pointsArray = new Point[4];
         final int width = firstImage.width();
@@ -269,6 +325,11 @@ public class BriefBuilder extends AbstractBuilder<Mat> {
         return tempDescriptor;
     }
 
+    /**
+     *
+     * @param image the image of which keypoints are needed
+     * @return a MatOfKeyPoint variable containing keypoints of the image
+     */
     private MatOfKeyPoint getKeypoint(Mat image) {
         final MatOfKeyPoint tempKeypoint = new MatOfKeyPoint();
         final StarDetector detector = StarDetector.create();
@@ -303,6 +364,8 @@ public class BriefBuilder extends AbstractBuilder<Mat> {
     }
 
     private void setOffsets() {
+        System.out.println("CALL setOffsets");
+        System.out.println("Max offsets in transformImage are: " + getMaxOffsetX() + " " + getMaxOffsetY());
         this.setOffsetsX(new ArrayList<>());
         this.setOffsetsY(new ArrayList<>());
         for (int index = 0; index < this.getMapOfPoints().size(); index++) {
@@ -328,6 +391,9 @@ public class BriefBuilder extends AbstractBuilder<Mat> {
         this.setMaxOffsetYIndex(this.getOffsetsY().indexOf(this.getMaxOffsetY()));
         if (this.getMaxOffsetY() <= 0) {
             this.setMaxOffsetY(0);
+            // the following line was absent in the version I received,
+            // it was probably a mistake but could've also been for some reason
+            this.setMaxOffsetYIndex(-1);
         }
     }
 
@@ -342,8 +408,19 @@ public class BriefBuilder extends AbstractBuilder<Mat> {
     public List<Mat> getImages() {
         return images;
     }
-
-    private Size getFinalSize(){
+    // TOCHECK, TOBETESTED
+    private void setAbsMaxValue(Double newValue){
+        this.absMaxValue = newValue;
+    }
+    // TOCHECK, TOBETESTED
+    private double getAbsMaxValue(){
+        return this.absMaxValue;
+    }
+    /**
+     *
+     * @return size the final size of the stack, with aligned images and all data preserved
+     */
+    private Size getStackFinalSize(){
         Size size = new Size(0,0);
         for(Mat img: getTransformedImages()){
             //method to find the max extension of aligned images while keeping all pixels

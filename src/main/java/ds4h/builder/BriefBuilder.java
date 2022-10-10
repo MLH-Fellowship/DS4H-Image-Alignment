@@ -38,7 +38,6 @@ import static org.opencv.core.CvType.CV_8U;
 import static org.opencv.core.CvType.CV_8UC1;
 import static org.opencv.imgcodecs.Imgcodecs.IMREAD_GRAYSCALE;
 import static org.opencv.imgcodecs.Imgcodecs.imreadmulti;
-import static org.opencv.imgproc.Imgproc.boundingRect;
 
 /**
  * BriefBuilder is a class implementing the automatic alignment functionality extending abstract builder
@@ -58,7 +57,12 @@ public class BriefBuilder extends AbstractBuilder<Mat> {
     private boolean canGo = true;
 
     // TOCHECK, TOBETESTED
-    private double absMaxValue = 0.0;
+    private List<Integer> horizShifts = new ArrayList<>();
+    private List<Integer> verticShifts = new ArrayList<>();
+    private boolean alignCalled;
+    private int maxXshift = 0;
+    private int maxYshift = 0;
+    private List<Integer> imagesShiftList = new ArrayList<>();
 
     public BriefBuilder(LoadingDialog loadingDialog, ImagesEditor editor, AutoAlignEvent event, OnAlignDialogEventListener listener) {
         super(loadingDialog, listener, editor, event);
@@ -86,23 +90,23 @@ public class BriefBuilder extends AbstractBuilder<Mat> {
 
     private void findContoursOfTransformedImages() {
         System.out.println("CALL findContoursOfTransformedImages");
-        System.out.println("Max offsets in findContoursOfTransformedImages are: " + getMaxOffsetX() + " " + getMaxOffsetY());
+        System.out.println("Max offsets in findContoursOfTransformedImages are: " + getMaxXshift() + " " + getMaxYshift());
         this.getFinalStackDimension().height = 0; // not nice, but it works
         this.getTransformedImages().forEach(mat -> {
             List<MatOfPoint> contours = new ArrayList<>();
             Mat hierarchy = new Mat();
             //calculates contours of the images
-            Imgproc.findContours(mat, contours, hierarchy, Imgproc.RETR_LIST, Imgproc.CHAIN_APPROX_SIMPLE);
+/*            Imgproc.findContours(mat, contours, hierarchy, Imgproc.RETR_LIST, Imgproc.CHAIN_APPROX_SIMPLE);
             contours.forEach(contour -> {
                 Rect rect = boundingRect(contour);
                 this.getFinalStackDimension().height = Math.max(this.getFinalStackDimension().height, rect.height);
                 this.getFinalStackDimension().width = Math.max(this.getFinalStackDimension().width, rect.width);
-            });
+            });*/
             // TOCHECK, TOBETESTED
             // note if you add 450 pixels here, you get twice as big enlargement in the final stack.. why? with '/2' is
             // brutally fixed
-            // with more than 2 images to be aligned you get a black band on the left of the stack.
-            this.getFinalStackDimension().width = this.getFinalStackDimension().width + (int) this.getAbsMaxValue()/2;
+            this.getFinalStackDimension().width = this.getFinalStackDimension().width + (int) this.getMaxXshift()/2;
+            this.getFinalStackDimension().height = this.getFinalStackDimension().height + (int) this.getMaxYshift()/2;
         });
     }
 
@@ -134,10 +138,13 @@ public class BriefBuilder extends AbstractBuilder<Mat> {
     @Override
     public void alignKeepOriginal() {
         System.out.println("CALL alignKeepOriginal");
+        alignCalled = true;
         // all of the following commented code is a mess. it was supposed to do the keep all pixel data part,
         // by dynamically adapt the size of the imageProcessor, but overcomplicated it with wrongly done offsets.
         // this wrong algorithm created a black band in the left part of the stack in frequent cases,
         // causing my dynamic adaptation to be in vain.
+        // this new implementation works with images in case the source image is the one most on the left in the stack
+        // otherwise they get cut
 /*        this.setSourceImageIndex(0);
         try {
             for (int index = 0; index < this.getImages().size(); index++) {
@@ -165,18 +172,55 @@ public class BriefBuilder extends AbstractBuilder<Mat> {
         } catch (Exception e) {
             IJ.showMessage("Not all the images will be put in the aligned stack, something went wrong, check your image because it seems that we couldn't find a relation: " + e.getMessage());
         }*/
-        System.out.println("CALL align");
         System.out.println("Max offsets in transformImage are: " + getMaxOffsetX() + " " + getMaxOffsetY());
-        this.setSourceImageIndex(0);
-        this.setVirtualStack(new VirtualStack(getSourceImage().width() + (int) getAbsMaxValue(), getSourceImage().height(), ColorModel.getRGBdefault(), IJ.getDir(TEMP_PATH)));
-        this.addToVirtualStack(matToImagePlus(getSourceImage()));
-        for (int index = 1; index < this.getImages().size(); index++) {
+        List<ImagePlus> transformedImagesList = new ArrayList<>();
+        // we want the source image to be the most to the left of the aligned stack otherwise
+        // the algorithm cuts the images out of the resulting stack.
+        this.setSourceImageIndex(getLeftMostImageIndex());
+        //this.addToVirtualStack(matToImagePlus(getSourceImage()));
+        for (int index = 0; index < this.getImages().size(); index++) {
+            // the source image has been added before, so it doesn't need to be added again, unlike the others
+/*            if(index != this.getSourceImageIndex()){
+                Mat image = transformImage(index);
+                if (image == null) continue;
+                ImagePlus transformedImage = this.matToImagePlus(image);
+                transformedImagesList.add(transformedImage);
+                this.addToVirtualStack(transformedImage);
+            }*/
             Mat image = transformImage(index);
             if (image == null) continue;
             ImagePlus transformedImage = this.matToImagePlus(image);
-            this.addToVirtualStack(transformedImage);
+            transformedImagesList.add(transformedImage);
+        }
+        System.out.println("MAX SHIFTS ARE: " + getMaxXshift() + ", " + getMaxYshift());
+        this.setVirtualStack(new VirtualStack(getSourceImage().width() + getMaxXshift(), this.getSourceImage().height() + getMaxYshift(), ColorModel.getRGBdefault(), IJ.getDir(TEMP_PATH)));
+/*        int leftShift = this.getLeftShift();
+        ImagePlus sourceImage = transformedImagesList.get(getSourceImageIndex());
+        //sourceImage.getProcessor().resize(sourceImage.getProcessor().getWidth() + (int) getAbsMaxValue());
+        sourceImage.getProcessor().translate(leftShift, 0);
+        this.addToVirtualStack(new ImagePlus("", sourceImage.getProcessor()));*/
+        for(ImagePlus image : transformedImagesList){
+/*            if(image != sourceImage){*/
+/*            ImageProcessor imagesProcessor = new ColorProcessor(this.getFinalStackDimension().width + (int) getAbsMaxValue(), this.getMaximumSize().height);
+            imagesProcessor.insert(image.getProcessor(), 0, 0);
+            imagesProcessor.translate(leftShift, 0);*/
+/*                image.getProcessor().resize(image.getProcessor().getWidth() + leftShift);
+                image.getProcessor().translate(leftShift, 0);*/
+            image.show();
+            this.addToVirtualStack(new ImagePlus("", image.getProcessor()));
+            //}
         }
     }
+
+    /**
+     *
+     * @return the index of the image which is most to the left in the final stack, which will be source image
+     */
+    private int getLeftMostImageIndex() {
+        int max = Collections.max(horizShifts);
+        return horizShifts.indexOf(max);
+    }
+
 
     @Override
     public void align() {
@@ -195,7 +239,6 @@ public class BriefBuilder extends AbstractBuilder<Mat> {
 
     // here the algorithm is applied to align (transform) the image
     private Mat transformImage(int transformedImageIndex) {
-        System.out.println("CALL transformImage");
         // two images
         final Mat firstImage = this.getSourceImage();
         final Mat secondImage = this.getImages().get(transformedImageIndex);
@@ -226,24 +269,39 @@ public class BriefBuilder extends AbstractBuilder<Mat> {
             Mat dest = new Mat();
             // Check directly the Javadoc, to learn more
             Core.perspectiveTransform(points, dest, this.getHomography(goodMatches, firstKeyPoints.toList(), secondKeyPoints.toList(), transformedImageIndex));
-            final Mat perspectiveM = Imgproc.getPerspectiveTransform(points, dest);
+            Mat perspectiveM = Imgproc.getPerspectiveTransform(points, dest);
+            System.out.println(perspectiveM.dump());
+            // fix attempt: images higher than sourceImage get partially cut, so this is an attempt to shift
+            // the whole stack vertically of the necessary amount
+            perspectiveM.put(1,2, perspectiveM.get(1,2)[0] - getSourceVerticShift());
             System.out.println("perspectiveM.width: " + perspectiveM.width());
             System.out.println("perspectiveM.height: " + perspectiveM.height());
             System.out.println("perspectiveM.size: " + perspectiveM.size());
             // TOCHECK, TOBETESTED (BEGINS)
             // with this function you can get min and max value of a Mat object
-            Core.MinMaxLocResult minMaxLoc = Core.minMaxLoc(perspectiveM);
+            // Core.MinMaxLocResult minMaxLoc = Core.minMaxLoc(perspectiveM);
             // we get the max absolute value between minVal and maxVal which corresponds to how much larger the
-            // transformed (aligned) image should be not to lose information.
-            double absMaxVal = Math.max(abs(minMaxLoc.maxVal),abs(minMaxLoc.minVal));
-            System.out.println("Max value in the transformation matrix is: " + absMaxVal);
-            if(absMaxVal==1){
-                absMaxVal = 0.0;
+            // final stack should be not to lose information.
+            //double absMaxVal = Math.max(abs(minMaxLoc.maxVal),abs(minMaxLoc.minVal)); commented because this was
+            // imprecise: it took the max value of all the matrix, while looking for the horizontal shift
+
+            //get horizontal and vertical shift of the image from the perspectiveMatrix (do a matrix dump to check it out)
+            // if it's < 1 then it's either zero or the matrix calculation error equivalent to 0
+            int imgXShift = (abs((int) perspectiveM.get(0,2)[0])) < 1 ? 0 : ((int) perspectiveM.get(0,2)[0]);
+            int imgYShift = (abs((int) perspectiveM.get(1,2)[0])) < 1 ? 0 : ((int) perspectiveM.get(1,2)[0]);
+            if(!alignCalled){
+                horizShifts.add(transformedImageIndex, imgXShift);
+                verticShifts.add(transformedImageIndex, imgYShift);
             }
-            if(this.getAbsMaxValue() < absMaxVal){
-                this.setAbsMaxValue(absMaxVal);
+            // check and update the max shifts, if needed
+            if(this.getMaxXshift() < abs(imgXShift)){
+                this.setMaxXshift(abs(imgXShift));
+            }
+            if(this.getMaxYshift() < abs(imgYShift)){
+                this.setMaxYshift(abs(imgYShift));
             }
             System.out.println(perspectiveM.dump());
+            //this.setAlignedImageShift(transformedImageIndex, (int) perspectiveM.get(0,2)[0]);
             // TOCHECK, TOBETESTED (ENDS)
             Mat warpedImage = new Mat();
             // Literally takes the secondImage, the perspective transformation matrix, the size of the first image, then warps the second image to fit the first, at least that's what I think is happening
@@ -251,7 +309,8 @@ public class BriefBuilder extends AbstractBuilder<Mat> {
             // down here the max offset should be added to size (width and height), but it is yet to be calculated:
             // it is to be found a way to calculate it before.
             // TOCHECK, TOBETESTED
-            Imgproc.warpPerspective(secondImage, warpedImage, perspectiveM, new Size(this.getFinalStackDimension().width+absMaxVal, this.getMaximumSize().height), Imgproc.WARP_INVERSE_MAP, Core.BORDER_CONSTANT);
+            // way found with absMaxVal, which the shift of this transformed Image
+            Imgproc.warpPerspective(secondImage, warpedImage, perspectiveM, new Size(this.getFinalStackDimension().width + this.getMaxXshift(), this.getMaximumSize().height + this.getMaxYshift()), Imgproc.WARP_INVERSE_MAP, Core.BORDER_CONSTANT);
             //Imgproc.warpPerspective(secondImage, warpedImage, perspectiveM, new Size(this.getFinalStackDimension().width*2, this.getMaximumSize().height), Imgproc.WARP_INVERSE_MAP, Core.BORDER_CONSTANT);
             // not the nicest solution, but obviously the image's data address changes after but the image it's the same, so to retrieve the same path I had to do this
             this.replaceKey(secondImage.dataAddr(), warpedImage.dataAddr());
@@ -259,6 +318,15 @@ public class BriefBuilder extends AbstractBuilder<Mat> {
             return warpedImage;
         }
         return null;
+
+    }
+
+    /**
+     *
+     * @return the vertical shift between the source image and the higher image in the aligned stack
+     */
+    private double getSourceVerticShift() {
+        return verticShifts.size() == 0? 0 : (double) Collections.max(verticShifts) - verticShifts.get(getSourceImageIndex());
     }
 
     // here you get the homography matrix (matches between images as input, matrix indicating translation as output)
@@ -325,6 +393,7 @@ public class BriefBuilder extends AbstractBuilder<Mat> {
             try {
                 List<Mat> images = new ArrayList<>();
                 imreadmulti(imageFile.getPathFile(), images, IMREAD_GRAYSCALE);
+                //imreadmulti(imageFile.getPathFile(), images, IMREAD_COLOR);
                 images.forEach(image -> this.pathMap.put(image.dataAddr(), imageFile.getPathFile()));
                 this.getImages().addAll(images);
             } catch (Exception e) {
@@ -423,14 +492,41 @@ public class BriefBuilder extends AbstractBuilder<Mat> {
     public List<Mat> getImages() {
         return images;
     }
-    // TOCHECK, TOBETESTED
-    private void setAbsMaxValue(Double newValue){
-        this.absMaxValue = newValue;
+
+    /**
+     *
+     * @param newValue sets the max shift in the stack in order to adapt its width
+     */
+    private void setMaxXshift(int newValue){
+        this.maxXshift = newValue;
     }
+
     // TOCHECK, TOBETESTED
-    private double getAbsMaxValue(){
-        return this.absMaxValue;
+    /**
+     *
+     * @return the max shift in the final stack, used to adapt its width
+     */
+    private int getMaxXshift(){
+        return this.maxXshift;
     }
+
+    /**
+     *
+     * @param newValue sets the max shift in the stack in order to adapt its width
+     */
+    private void setMaxYshift(int newValue){
+        this.maxYshift = newValue;
+    }
+
+    // TOCHECK, TOBETESTED
+    /**
+     *
+     * @return the max shift in the final stack, used to adapt its width
+     */
+    private int getMaxYshift(){
+        return this.maxYshift;
+    }
+
     /**
      *
      * @return size the final size of the stack, with aligned images and all data preserved

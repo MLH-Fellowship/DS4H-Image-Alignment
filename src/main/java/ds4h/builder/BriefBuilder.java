@@ -18,6 +18,7 @@ import ds4h.utils.Pair;
 import ij.IJ;
 import ij.ImagePlus;
 import ij.VirtualStack;
+import ij.plugin.RGBStackMerge;
 import ij.process.ByteProcessor;
 import ij.process.ImageProcessor;
 import org.opencv.calib3d.Calib3d;
@@ -36,8 +37,7 @@ import java.util.*;
 import static java.lang.Math.abs;
 import static org.opencv.core.CvType.CV_8U;
 import static org.opencv.core.CvType.CV_8UC1;
-import static org.opencv.imgcodecs.Imgcodecs.IMREAD_GRAYSCALE;
-import static org.opencv.imgcodecs.Imgcodecs.imreadmulti;
+import static org.opencv.imgcodecs.Imgcodecs.*;
 
 /**
  * BriefBuilder is a class implementing the automatic alignment functionality extending abstract builder
@@ -51,6 +51,7 @@ import static org.opencv.imgcodecs.Imgcodecs.imreadmulti;
  */
 public class BriefBuilder extends AbstractBuilder<Mat> {
     private final List<Mat> images = new ArrayList<>();
+    private List<List<Mat>> imagesSplit = new ArrayList<List<Mat>>();
     private final Map<Long, String> pathMap = new HashMap<>();
     private final Map<Pair<Integer, Integer>, Pair<List<Point>, List<Point>>> mapOfPoints = new HashMap<>();
     private final List<Mat> transformedImages = new ArrayList<>();
@@ -59,7 +60,7 @@ public class BriefBuilder extends AbstractBuilder<Mat> {
     // TOCHECK, TOBETESTED
     private List<Integer> horizShifts = new ArrayList<>();
     private List<Integer> verticShifts = new ArrayList<>();
-    private boolean alignCalled;
+    private boolean alignCalled = false;
     private int maxXshift = 0;
     private int maxYshift = 0;
     private List<Integer> imagesShiftList = new ArrayList<>();
@@ -82,33 +83,20 @@ public class BriefBuilder extends AbstractBuilder<Mat> {
             return;
         }
         this.setOffsets();
-        this.findContoursOfTransformedImages();
+        //this.findContoursOfTransformedImages();
         this.checkFinalStackDimension();
         this.setFinalStackToVirtualStack();
         this.addFinalStackToVirtualStack();
+        alignCalled = false;
     }
 
+/*    // this function is probably useless now, the virtualstack dimension are set in alignKeepOriginal
     private void findContoursOfTransformedImages() {
         System.out.println("CALL findContoursOfTransformedImages");
         System.out.println("Max offsets in findContoursOfTransformedImages are: " + getMaxXshift() + " " + getMaxYshift());
-        this.getFinalStackDimension().height = 0; // not nice, but it works
-        this.getTransformedImages().forEach(mat -> {
-            List<MatOfPoint> contours = new ArrayList<>();
-            Mat hierarchy = new Mat();
-            //calculates contours of the images
-/*            Imgproc.findContours(mat, contours, hierarchy, Imgproc.RETR_LIST, Imgproc.CHAIN_APPROX_SIMPLE);
-            contours.forEach(contour -> {
-                Rect rect = boundingRect(contour);
-                this.getFinalStackDimension().height = Math.max(this.getFinalStackDimension().height, rect.height);
-                this.getFinalStackDimension().width = Math.max(this.getFinalStackDimension().width, rect.width);
-            });*/
-            // TOCHECK, TOBETESTED
-            // note if you add 450 pixels here, you get twice as big enlargement in the final stack.. why? with '/2' is
-            // brutally fixed
-            this.getFinalStackDimension().width = this.getFinalStackDimension().width + (int) this.getMaxXshift()/2;
-            this.getFinalStackDimension().height = this.getFinalStackDimension().height + (int) this.getMaxYshift()/2;
-        });
-    }
+        this.getFinalStackDimension().width = this.getFinalStackDimension().width + (int) this.getMaxXshift();
+        this.getFinalStackDimension().height = this.getFinalStackDimension().height + (int) this.getMaxYshift();
+    }*/
 
     @Override
     protected ImageProcessor getFinalStackImageProcessor() {
@@ -138,77 +126,39 @@ public class BriefBuilder extends AbstractBuilder<Mat> {
     @Override
     public void alignKeepOriginal() {
         System.out.println("CALL alignKeepOriginal");
+        // alignCalled is needed because transformImage() is also used as a caching function
+        // to get information about the shifts, so some operations must not be called when caching.
         alignCalled = true;
-        // all of the following commented code is a mess. it was supposed to do the keep all pixel data part,
-        // by dynamically adapt the size of the imageProcessor, but overcomplicated it with wrongly done offsets.
-        // this wrong algorithm created a black band in the left part of the stack in frequent cases,
-        // causing my dynamic adaptation to be in vain.
-        // this new implementation works with images in case the source image is the one most on the left in the stack
-        // otherwise they get cut
-/*        this.setSourceImageIndex(0);
-        try {
-            for (int index = 0; index < this.getImages().size(); index++) {
-                if (index == this.getSourceImageIndex()) continue;
-                //take a single transformed image
-                Mat image = this.getTransformedImages().get(index);
-                if (image == null) continue;
-                System.out.println("final stack width in alignKeepOriginal(): " + this.getFinalStackDimension().width);
-                System.out.println("final stack height in alignKeepOriginal(): " + this.getFinalStackDimension().height);
-                ImageProcessor newProcessor = new ColorProcessor(this.getFinalStackDimension().width, this.getMaximumSize().height);
-                ImagePlus transformedImage = this.matToImagePlus(image);
-                //transformedImage = transformedImage.
-                int offsetXTransformed = 0;
-                if (this.getOffsetsX().get(index) > 0 && this.getMaxOffsetXIndex() != index) {
-                    offsetXTransformed = abs(this.getOffsetsX().get(index));
-                    System.out.println("transformed image offset in alignKeepOriginal(): " + offsetXTransformed);
-                }
-                offsetXTransformed += this.getMaxOffsetX();
-                System.out.println("transformed image offsetXTransformed in alignKeepOriginal(): " + offsetXTransformed);
-                //down here images aligned are modified, real deal it's in this two lines
-                //newProcessor provides image handling, it gets filled with the information and then passed to the stack
-                newProcessor.insert(transformedImage.getProcessor(), offsetXTransformed, this.getMaxOffsetY());
-                this.addToVirtualStack(new ImagePlus("", newProcessor));
-            }
-        } catch (Exception e) {
-            IJ.showMessage("Not all the images will be put in the aligned stack, something went wrong, check your image because it seems that we couldn't find a relation: " + e.getMessage());
-        }*/
-        System.out.println("Max offsets in transformImage are: " + getMaxOffsetX() + " " + getMaxOffsetY());
         List<ImagePlus> transformedImagesList = new ArrayList<>();
         // we want the source image to be the most to the left of the aligned stack otherwise
         // the algorithm cuts the images out of the resulting stack.
         this.setSourceImageIndex(getLeftMostImageIndex());
-        //this.addToVirtualStack(matToImagePlus(getSourceImage()));
+        // use transformImage() for each image, then convert it to ImagePlus
         for (int index = 0; index < this.getImages().size(); index++) {
-            // the source image has been added before, so it doesn't need to be added again, unlike the others
-/*            if(index != this.getSourceImageIndex()){
-                Mat image = transformImage(index);
-                if (image == null) continue;
-                ImagePlus transformedImage = this.matToImagePlus(image);
-                transformedImagesList.add(transformedImage);
-                this.addToVirtualStack(transformedImage);
-            }*/
             Mat image = transformImage(index);
             if (image == null) continue;
             ImagePlus transformedImage = this.matToImagePlus(image);
             transformedImagesList.add(transformedImage);
         }
-        System.out.println("MAX SHIFTS ARE: " + getMaxXshift() + ", " + getMaxYshift());
+        // VirtualStack dimension will be adapted from source image, adding the maximum horizontal and vertical shifts.
         this.setVirtualStack(new VirtualStack(getSourceImage().width() + getMaxXshift(), this.getSourceImage().height() + getMaxYshift(), ColorModel.getRGBdefault(), IJ.getDir(TEMP_PATH)));
-/*        int leftShift = this.getLeftShift();
-        ImagePlus sourceImage = transformedImagesList.get(getSourceImageIndex());
-        //sourceImage.getProcessor().resize(sourceImage.getProcessor().getWidth() + (int) getAbsMaxValue());
-        sourceImage.getProcessor().translate(leftShift, 0);
-        this.addToVirtualStack(new ImagePlus("", sourceImage.getProcessor()));*/
-        for(ImagePlus image : transformedImagesList){
-/*            if(image != sourceImage){*/
-/*            ImageProcessor imagesProcessor = new ColorProcessor(this.getFinalStackDimension().width + (int) getAbsMaxValue(), this.getMaximumSize().height);
-            imagesProcessor.insert(image.getProcessor(), 0, 0);
-            imagesProcessor.translate(leftShift, 0);*/
-/*                image.getProcessor().resize(image.getProcessor().getWidth() + leftShift);
-                image.getProcessor().translate(leftShift, 0);*/
-            image.show();
-            this.addToVirtualStack(new ImagePlus("", image.getProcessor()));
-            //}
+        for(int i = 0; i < transformedImagesList.size(); i++){
+            //if it is empty, it means the image was grayscale
+            if(imagesSplit.get(i).isEmpty()){
+                this.addToVirtualStack(new ImagePlus("", transformedImagesList.get(i).getProcessor()));
+            } else {
+                List<ImagePlus> imagePlusChannels = new ArrayList<>();
+                // I convert the rgb mat channels into imagePlus
+                ImagePlus channel;
+                for (Mat el: imagesSplit.get(i)) {
+                    channel = matToImagePlus(el);
+                    imagePlusChannels.add(channel);
+                }
+                ImagePlus mergedColoredImage = new ImagePlus();
+                // I merge the 3 rgb single channels into one, now consisting in the rgb image
+                mergedColoredImage.setStack(RGBStackMerge.mergeStacks(imagePlusChannels.get(2).getImageStack(), imagePlusChannels.get(1).getImageStack(), imagePlusChannels.get(0).getImageStack(), false));
+                this.addToVirtualStack(new ImagePlus("", mergedColoredImage.getProcessor()));
+            }
         }
     }
 
@@ -221,9 +171,9 @@ public class BriefBuilder extends AbstractBuilder<Mat> {
         return horizShifts.indexOf(max);
     }
 
-
     @Override
     public void align() {
+        alignCalled = true;
         System.out.println("CALL align");
         System.out.println("Max offsets in transformImage are: " + getMaxOffsetX() + " " + getMaxOffsetY());
         this.setSourceImageIndex(0);
@@ -271,47 +221,49 @@ public class BriefBuilder extends AbstractBuilder<Mat> {
             Core.perspectiveTransform(points, dest, this.getHomography(goodMatches, firstKeyPoints.toList(), secondKeyPoints.toList(), transformedImageIndex));
             Mat perspectiveM = Imgproc.getPerspectiveTransform(points, dest);
             System.out.println(perspectiveM.dump());
-            // fix attempt: images higher than sourceImage get partially cut, so this is an attempt to shift
+            // images higher than sourceImage get partially cut, so this is to shift
             // the whole stack vertically of the necessary amount
-            perspectiveM.put(1,2, perspectiveM.get(1,2)[0] - getSourceVerticShift());
-            System.out.println("perspectiveM.width: " + perspectiveM.width());
-            System.out.println("perspectiveM.height: " + perspectiveM.height());
-            System.out.println("perspectiveM.size: " + perspectiveM.size());
-            // TOCHECK, TOBETESTED (BEGINS)
-            // with this function you can get min and max value of a Mat object
-            // Core.MinMaxLocResult minMaxLoc = Core.minMaxLoc(perspectiveM);
-            // we get the max absolute value between minVal and maxVal which corresponds to how much larger the
-            // final stack should be not to lose information.
-            //double absMaxVal = Math.max(abs(minMaxLoc.maxVal),abs(minMaxLoc.minVal)); commented because this was
-            // imprecise: it took the max value of all the matrix, while looking for the horizontal shift
-
-            //get horizontal and vertical shift of the image from the perspectiveMatrix (do a matrix dump to check it out)
+            perspectiveM.put(1,2, perspectiveM.get(1,2)[0] - getSourceVerticalShift());
+            // Get horizontal and vertical shift of the image from the perspectiveMatrix (do a matrix dump to check it out)
             // if it's < 1 then it's either zero or the matrix calculation error equivalent to 0
-            int imgXShift = (abs((int) perspectiveM.get(0,2)[0])) < 1 ? 0 : ((int) perspectiveM.get(0,2)[0]);
-            int imgYShift = (abs((int) perspectiveM.get(1,2)[0])) < 1 ? 0 : ((int) perspectiveM.get(1,2)[0]);
+            int imgHorizontalShift = (abs((int) perspectiveM.get(0,2)[0])) < 1 ? 0 : ((int) perspectiveM.get(0,2)[0]);
+            int imgVerticalShift = (abs((int) perspectiveM.get(1,2)[0])) < 1 ? 0 : ((int) perspectiveM.get(1,2)[0]);
             if(!alignCalled){
-                horizShifts.add(transformedImageIndex, imgXShift);
-                verticShifts.add(transformedImageIndex, imgYShift);
+                horizShifts.add(transformedImageIndex, imgHorizontalShift);
+                verticShifts.add(transformedImageIndex, imgVerticalShift);
             }
             // check and update the max shifts, if needed
-            if(this.getMaxXshift() < abs(imgXShift)){
-                this.setMaxXshift(abs(imgXShift));
+            if(this.getMaxXshift() < abs(imgHorizontalShift)){
+                this.setMaxXshift(abs(imgHorizontalShift));
             }
-            if(this.getMaxYshift() < abs(imgYShift)){
-                this.setMaxYshift(abs(imgYShift));
+            if(this.getMaxYshift() < abs(imgVerticalShift)){
+                this.setMaxYshift(abs(imgVerticalShift));
             }
             System.out.println(perspectiveM.dump());
             //this.setAlignedImageShift(transformedImageIndex, (int) perspectiveM.get(0,2)[0]);
-            // TOCHECK, TOBETESTED (ENDS)
             Mat warpedImage = new Mat();
-            // Literally takes the secondImage, the perspective transformation matrix, the size of the first image, then warps the second image to fit the first, at least that's what I think is happening
-            System.out.println("Max offsets in transformImage are: " + getMaxOffsetX() + " " + getMaxOffsetY());
-            // down here the max offset should be added to size (width and height), but it is yet to be calculated:
-            // it is to be found a way to calculate it before.
-            // TOCHECK, TOBETESTED
-            // way found with absMaxVal, which the shift of this transformed Image
+            //first check if align function was called, not to shift twice
+            // (it gets called by cachetransformedImage() and by alignKeepOriginal()).
+            if (alignCalled) {
+                // if the array is not empty, it means it was an rgb image and it got filled.
+                if(!imagesSplit.get(transformedImageIndex).isEmpty()){
+                    List<Mat> warpedChannelList = new ArrayList<>();
+                    // shift (align) all the rgb channels one by one
+                    for(int j = 0; j < imagesSplit.get(transformedImageIndex).size(); j++){
+                        Mat warpedChannel = new Mat();
+                        // down here the max offset is added to size (width and height), this is possible because transformImage
+                        // gets called already nImages times, and the max shifts are already calculated as well.
+                        Imgproc.warpPerspective(imagesSplit.get(transformedImageIndex).get(j), warpedChannel, perspectiveM, new Size(this.getFinalStackDimension().width + this.getMaxXshift(), this.getMaximumSize().height + this.getMaxYshift()), Imgproc.WARP_INVERSE_MAP, Core.BORDER_CONSTANT);
+                        warpedChannelList.add(warpedChannel);
+                    }
+                    // replace the old rgb channels with the aligned ones.
+                    imagesSplit.get(transformedImageIndex).clear();
+                    imagesSplit.get(transformedImageIndex).addAll(warpedChannelList);
+                }
+            }
+            // Takes image to which apply transformation, output image, the perspective transformation matrix,
+            // the size of the output image, then warps the image using the matrix
             Imgproc.warpPerspective(secondImage, warpedImage, perspectiveM, new Size(this.getFinalStackDimension().width + this.getMaxXshift(), this.getMaximumSize().height + this.getMaxYshift()), Imgproc.WARP_INVERSE_MAP, Core.BORDER_CONSTANT);
-            //Imgproc.warpPerspective(secondImage, warpedImage, perspectiveM, new Size(this.getFinalStackDimension().width*2, this.getMaximumSize().height), Imgproc.WARP_INVERSE_MAP, Core.BORDER_CONSTANT);
             // not the nicest solution, but obviously the image's data address changes after but the image it's the same, so to retrieve the same path I had to do this
             this.replaceKey(secondImage.dataAddr(), warpedImage.dataAddr());
             // then to all the things need to create a virtual stack of images
@@ -325,7 +277,7 @@ public class BriefBuilder extends AbstractBuilder<Mat> {
      *
      * @return the vertical shift between the source image and the higher image in the aligned stack
      */
-    private double getSourceVerticShift() {
+    private double getSourceVerticalShift() {
         return verticShifts.size() == 0? 0 : (double) Collections.max(verticShifts) - verticShifts.get(getSourceImageIndex());
     }
 
@@ -368,6 +320,7 @@ public class BriefBuilder extends AbstractBuilder<Mat> {
     private ImagePlus matToImagePlus(Mat image) {
         final int type = image.type();
         ImageProcessor result = null;
+        /*if (image.channels() == 1) {*/
         if (type == CV_8UC1) {
             result = makeByteProcessor(image);
         } else {
@@ -388,12 +341,81 @@ public class BriefBuilder extends AbstractBuilder<Mat> {
      *
      * imports the images from editor into the builder
      */
+/*    private void importImages() {
+
+        //TODELETE
+        int i = 0;
+        Mat singleImage;
+
+        for (ImageFile imageFile : this.getEditor().getImageFiles()) {
+            try {
+                List<Mat> images = new ArrayList<>();
+                // TODELETE
+                List<Mat> coloredImages = new ArrayList<>();
+                List<ImagePlus> imagePlusChannels = new ArrayList<>();
+                singleImage = imread(imageFile.getPathFile(), IMREAD_ANYCOLOR);
+                // first handle rgb image case : save the rgb by splitting the image into single channels,
+                // then shift them coherently and lastly merge them.
+                if (singleImage.channels() == 3){
+                    Core.split(singleImage, coloredImages);
+                    ImagePlus imgPlus;
+                    // Core.merge(coloredImages, merged);
+                    for (Mat el: coloredImages) {
+                        //ERRORE in matToImagePlus: it should be expanded to handle rgb images.
+                        imgPlus = matToImagePlus(el);
+                        imagePlusChannels.add(imgPlus);
+                        imgPlus.show();
+                    }
+                    ImagePlus newImgPlus = new ImagePlus();
+                    newImgPlus.setStack(RGBStackMerge.mergeStacks(imagePlusChannels.get(2).getImageStack(), imagePlusChannels.get(1).getImageStack(), imagePlusChannels.get(0).getImageStack(), false));
+                    newImgPlus.show();
+                }
+                // If the image isn't grayscale nor rgb, we will handle it as grayscale.
+                // feature to be implemented: handle different image types
+                if(singleImage.channels() != 1 && singleImage.channels() != 3){
+                    IJ.showMessage("Image color type not supported yet, the output will be in grayscale.");
+                }
+                // image converted into grayscale for the algorithm to work
+                imreadmulti(imageFile.getPathFile(), images, IMREAD_GRAYSCALE);
+                images.forEach(img -> this.pathMap.put(img.dataAddr(), imageFile.getPathFile()));
+                this.getImages().addAll(images);
+
+                // need a way to divide the channels and save them in a list,
+                // to then be able to singly shift them and, in the end, merge them.
+                // - somehow the following code doesn't work, it adds only the first image.
+*//*                coloredImages.add(i, imread(imageFile.getPathFile(), IMREAD_ANYCOLOR));
+                System.out.println(coloredImages.size() + "  IS THE SIZEEEEEEEEEEEEEEEEE");
+
+                System.out.println(" IMMAGINE " + i + " CONTIENE FILES NUMERO: " + coloredImages.get(i) + " " + " " + coloredImages.get(i++).channels());*//*
+                // IMMAGINE 0 CONTIENE FILES NUMERO: Mat [ 512*640*CV_8UC3, isCont=true, isSubmat=false, nativeObj=0x25a5f041c20, dataAddr=0x25a5e91ef80 ] 1
+                // CV_8UC3-> 8 bit depth, Unsigned type, 3 channels.
+                //imreadmulti(imageFile.getPathFile(), images, IMREAD_COLOR);
+            } catch (Exception e) {
+                IJ.showMessage(e.getMessage());
+            }
+        }
+    }*/
+
+
     private void importImages() {
         for (ImageFile imageFile : this.getEditor().getImageFiles()) {
             try {
                 List<Mat> images = new ArrayList<>();
+                //we add an empty array to imagesSplit, in case the images are RGB,
+                // An empty array is added, in case the image is RGB it gets filled with the channels as Mat,
+                // otherwise it stays empty. The empty check is done in transform image.
+                this.imagesSplit.add(new ArrayList<Mat>());
+                Mat singleImage = imread(imageFile.getPathFile(), IMREAD_ANYCOLOR);
+                // in case image is rgb, split the image in its different Mat channels,
+                // to be then aligned and merged and fill the splitImages array
+                if(singleImage.channels() == 3){
+                    Core.split(singleImage, imagesSplit.get(this.getEditor().getImageFiles().indexOf(imageFile)));
+                } else if(singleImage.channels() != 1){
+                    IJ.showMessage("Only grayscale and RGB formats are currently supported");
+                }
+                // the alignment is handled in grayscale, provides the aligned stack information that we will eventually use
+                // to align the rgb images, which have been separated into mat channels.
                 imreadmulti(imageFile.getPathFile(), images, IMREAD_GRAYSCALE);
-                //imreadmulti(imageFile.getPathFile(), images, IMREAD_COLOR);
                 images.forEach(image -> this.pathMap.put(image.dataAddr(), imageFile.getPathFile()));
                 this.getImages().addAll(images);
             } catch (Exception e) {
@@ -449,7 +471,6 @@ public class BriefBuilder extends AbstractBuilder<Mat> {
 
     private void setOffsets() {
         System.out.println("CALL setOffsets");
-        System.out.println("Max offsets in transformImage are: " + getMaxOffsetX() + " " + getMaxOffsetY());
         this.setOffsetsX(new ArrayList<>());
         this.setOffsetsY(new ArrayList<>());
         for (int index = 0; index < this.getMapOfPoints().size(); index++) {
@@ -525,19 +546,5 @@ public class BriefBuilder extends AbstractBuilder<Mat> {
      */
     private int getMaxYshift(){
         return this.maxYshift;
-    }
-
-    /**
-     *
-     * @return size the final size of the stack, with aligned images and all data preserved
-     */
-    private Size getStackFinalSize(){
-        Size size = new Size(0,0);
-        for(Mat img: getTransformedImages()){
-            //method to find the max extension of aligned images while keeping all pixels
-            //this will be used to adapt the output of automatic alignment, when keep all pixel data is activated
-            // in order to not cut the images.
-        }
-        return size;
     }
 }

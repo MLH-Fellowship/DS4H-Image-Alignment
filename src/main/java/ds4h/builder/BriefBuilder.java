@@ -69,6 +69,9 @@ public class BriefBuilder extends AbstractBuilder<Mat> {
         super(loadingDialog, listener, editor, event);
     }
 
+    /**
+     * Calls methods and function to compute and provide the aligned stack.
+     */
     @Override
     public void init() {
         this.importImages();
@@ -101,13 +104,15 @@ public class BriefBuilder extends AbstractBuilder<Mat> {
     @Override
     protected ImageProcessor getFinalStackImageProcessor() {
         System.out.println("CALL getFinalStackImageProcessor");
-        System.out.println("Max offsets in transformImage are: " + getMaxOffsetX() + " " + getMaxOffsetY());
         final ImageProcessor processor;
         processor = matToImagePlus(this.getSourceImage()).getProcessor().createProcessor(this.getFinalStackDimension().width, this.getFinalStackDimension().height);
         processor.insert(matToImagePlus(this.getSourceImage()).getProcessor(), this.getMaxOffsetX(), this.getMaxOffsetY());
         return processor;
     }
 
+    /**
+     * for each image calls beforehand transformImage(), to achieve information about the images position and shifts
+     */
     private void cacheTransformedImages() {
         for (int index = 0; index < this.getImages().size(); index++) {
             Mat transformedImage = this.transformImage(index);
@@ -147,17 +152,7 @@ public class BriefBuilder extends AbstractBuilder<Mat> {
             if(imagesSplit.get(i).isEmpty()){
                 this.addToVirtualStack(new ImagePlus("", transformedImagesList.get(i).getProcessor()));
             } else {
-                List<ImagePlus> imagePlusChannels = new ArrayList<>();
-                // I convert the rgb mat channels into imagePlus
-                ImagePlus channel;
-                for (Mat el: imagesSplit.get(i)) {
-                    channel = matToImagePlus(el);
-                    imagePlusChannels.add(channel);
-                }
-                ImagePlus mergedColoredImage = new ImagePlus();
-                // I merge the 3 rgb single channels into one, now consisting in the rgb image
-                mergedColoredImage.setStack(RGBStackMerge.mergeStacks(imagePlusChannels.get(2).getImageStack(), imagePlusChannels.get(1).getImageStack(), imagePlusChannels.get(0).getImageStack(), false));
-                this.addToVirtualStack(new ImagePlus("", mergedColoredImage.getProcessor()));
+                this.addToVirtualStack(new ImagePlus("", matToRGBImagePlus(imagesSplit.get(i)).getProcessor()));
             }
         }
     }
@@ -171,19 +166,59 @@ public class BriefBuilder extends AbstractBuilder<Mat> {
         return horizShifts.indexOf(max);
     }
 
+    /**
+     * aligns provided images but cutting them (no stack adaptation)
+     * - Currently needs fixing, based on the previous version of it,
+     *  when rgb images were not included.
+     */
     @Override
     public void align() {
+        //MODIFICA 1025 TOBEDONE: controllare che la prima immagine venga convertita correttamente (quella presa come source), viene convertita con matToImagePlus
         alignCalled = true;
         System.out.println("CALL align");
-        System.out.println("Max offsets in transformImage are: " + getMaxOffsetX() + " " + getMaxOffsetY());
         this.setSourceImageIndex(0);
+        //fix attempt down commented code
         this.setVirtualStack(new VirtualStack(getSourceImage().width(), getSourceImage().height(), ColorModel.getRGBdefault(), IJ.getDir(TEMP_PATH)));
-        this.addToVirtualStack(matToImagePlus(getSourceImage()));
-        for (int index = 1; index < this.getImages().size(); index++) {
+        //this.setVirtualStack(new VirtualStack(getSourceImage().width() + getMaxXshift(), this.getSourceImage().height() + getMaxYshift(), ColorModel.getRGBdefault(), IJ.getDir(TEMP_PATH)));
+        ArrayList<Mat> sourceSplitRGB = new ArrayList<>();
+        Core.split(getSourceImage(), sourceSplitRGB);
+        System.out.println("YOOOO: " + sourceSplitRGB.size());
+        if(!imagesSplit.get(getSourceImageIndex()).isEmpty()){
+            System.out.println("MIAO");
+            //this.addToVirtualStack(matToRGBImagePlus(sourceSplitRGB));
+            this.addToVirtualStack(matToRGBImagePlus(imagesSplit.get(getSourceImageIndex())));
+        } else if(getSourceImage().channels() == 1){
+            this.addToVirtualStack(matToImagePlus(getSourceImage()));
+        } else if(getSourceImage().channels() != 1){
+            IJ.showMessage("Only grayscale and RGB formats are currently supported");
+        }
+/*        for (int index = 1; index < this.getImages().size(); index++) {
             Mat image = transformImage(index);
             if (image == null) continue;
             ImagePlus transformedImage = this.matToImagePlus(image);
             this.addToVirtualStack(transformedImage);
+        }*/
+        // From here FIX ATTEMPT
+        List<ImagePlus> transformedImagesList = new ArrayList<>();
+        for (int index = 0; index < this.getImages().size(); index++) {
+            Mat image = transformImage(index);
+            if (image == null) continue;
+            System.out.println("MIAO8");
+            ImagePlus transformedImage = this.matToImagePlus(image);
+            transformedImagesList.add(transformedImage);
+            System.out.println("MIAO9");
+        }
+        // starting from one because earlier we already inserted one.
+        for(int i = 1; i < transformedImagesList.size(); i++){
+            //if it is empty, it means the image was grayscale
+            System.out.println("MIAO10");
+            if(imagesSplit.get(i).isEmpty()){
+                this.addToVirtualStack(new ImagePlus("", transformedImagesList.get(i).getProcessor()));
+                System.out.println("MIAO11");
+            } else {
+                this.addToVirtualStack(new ImagePlus("", matToRGBImagePlus(imagesSplit.get(i)).getProcessor()));
+                System.out.println("MIAO12");
+            }
         }
     }
 
@@ -213,7 +248,7 @@ public class BriefBuilder extends AbstractBuilder<Mat> {
             IJ.showMessage("Check all your images, one of them seems to have not valuable matches for our algorithm");
         }
         List<DMatch> goodMatches = this.getGoodMatches(knnMatches);
-        // Below four matches the images couldn't be related
+        // Below four matches the images couldn't be related (TOMOVE to a separate function)
         if (goodMatches.size() > 4) {
             final MatOfPoint2f points = new MatOfPoint2f(this.getPointsArray(firstImage));
             Mat dest = new Mat();
@@ -221,6 +256,7 @@ public class BriefBuilder extends AbstractBuilder<Mat> {
             Core.perspectiveTransform(points, dest, this.getHomography(goodMatches, firstKeyPoints.toList(), secondKeyPoints.toList(), transformedImageIndex));
             Mat perspectiveM = Imgproc.getPerspectiveTransform(points, dest);
             System.out.println(perspectiveM.dump());
+            System.out.println("MIAO2");
             // images higher than sourceImage get partially cut, so this is to shift
             // the whole stack vertically of the necessary amount
             perspectiveM.put(1,2, perspectiveM.get(1,2)[0] - getSourceVerticalShift());
@@ -228,6 +264,7 @@ public class BriefBuilder extends AbstractBuilder<Mat> {
             // if it's < 1 then it's either zero or the matrix calculation error equivalent to 0
             int imgHorizontalShift = (abs((int) perspectiveM.get(0,2)[0])) < 1 ? 0 : ((int) perspectiveM.get(0,2)[0]);
             int imgVerticalShift = (abs((int) perspectiveM.get(1,2)[0])) < 1 ? 0 : ((int) perspectiveM.get(1,2)[0]);
+            System.out.println("MIAO3");
             if(!alignCalled){
                 horizShifts.add(transformedImageIndex, imgHorizontalShift);
                 verticShifts.add(transformedImageIndex, imgVerticalShift);
@@ -239,12 +276,13 @@ public class BriefBuilder extends AbstractBuilder<Mat> {
             if(this.getMaxYshift() < abs(imgVerticalShift)){
                 this.setMaxYshift(abs(imgVerticalShift));
             }
-            System.out.println(perspectiveM.dump());
+            System.out.println("MIAO4");
             //this.setAlignedImageShift(transformedImageIndex, (int) perspectiveM.get(0,2)[0]);
             Mat warpedImage = new Mat();
             //first check if align function was called, not to shift twice
             // (it gets called by cachetransformedImage() and by alignKeepOriginal()).
             if (alignCalled) {
+                System.out.println("MIAO5");
                 // if the array is not empty, it means it was an rgb image and it got filled.
                 if(!imagesSplit.get(transformedImageIndex).isEmpty()){
                     List<Mat> warpedChannelList = new ArrayList<>();
@@ -253,9 +291,14 @@ public class BriefBuilder extends AbstractBuilder<Mat> {
                         Mat warpedChannel = new Mat();
                         // down here the max offset is added to size (width and height), this is possible because transformImage
                         // gets called already nImages times, and the max shifts are already calculated as well.
+
+                        //MODIFICA 102022
                         Imgproc.warpPerspective(imagesSplit.get(transformedImageIndex).get(j), warpedChannel, perspectiveM, new Size(this.getFinalStackDimension().width + this.getMaxXshift(), this.getMaximumSize().height + this.getMaxYshift()), Imgproc.WARP_INVERSE_MAP, Core.BORDER_CONSTANT);
+                        //Imgproc.warpPerspective(imagesSplit.get(transformedImageIndex).get(j), warpedChannel, perspectiveM, new Size(this.getFinalStackDimension().width, this.getMaximumSize().height), Imgproc.WARP_INVERSE_MAP, Core.BORDER_CONSTANT);
+
                         warpedChannelList.add(warpedChannel);
                     }
+                    System.out.println("MIAO6");
                     // replace the old rgb channels with the aligned ones.
                     imagesSplit.get(transformedImageIndex).clear();
                     imagesSplit.get(transformedImageIndex).addAll(warpedChannelList);
@@ -263,9 +306,14 @@ public class BriefBuilder extends AbstractBuilder<Mat> {
             }
             // Takes image to which apply transformation, output image, the perspective transformation matrix,
             // the size of the output image, then warps the image using the matrix
+
+            //MODIFICA 102022
             Imgproc.warpPerspective(secondImage, warpedImage, perspectiveM, new Size(this.getFinalStackDimension().width + this.getMaxXshift(), this.getMaximumSize().height + this.getMaxYshift()), Imgproc.WARP_INVERSE_MAP, Core.BORDER_CONSTANT);
+            //Imgproc.warpPerspective(secondImage, warpedImage, perspectiveM, new Size(this.getFinalStackDimension().width, this.getMaximumSize().height), Imgproc.WARP_INVERSE_MAP, Core.BORDER_CONSTANT);
+            System.out.println("MIAO7");
             // not the nicest solution, but obviously the image's data address changes after but the image it's the same, so to retrieve the same path I had to do this
             this.replaceKey(secondImage.dataAddr(), warpedImage.dataAddr());
+            System.out.println("MIAO8");
             // then to all the things need to create a virtual stack of images
             return warpedImage;
         }
@@ -317,10 +365,14 @@ public class BriefBuilder extends AbstractBuilder<Mat> {
         return pointsArray;
     }
 
+    /**
+     *
+     * @param image in Mat format to be converted to ImagePlus (only works with grayscale CV_8UC1 Mats)
+     * @return image in ImagePlus format
+     */
     private ImagePlus matToImagePlus(Mat image) {
         final int type = image.type();
         ImageProcessor result = null;
-        /*if (image.channels() == 1) {*/
         if (type == CV_8UC1) {
             result = makeByteProcessor(image);
         } else {
@@ -500,6 +552,29 @@ public class BriefBuilder extends AbstractBuilder<Mat> {
             // it was probably a mistake but could've also been for some reason
             this.setMaxOffsetYIndex(-1);
         }
+    }
+
+    /**
+     *
+     * @param rgbChannels List of 3 Mat objects, channels of a RGB image to be converted in ImagePlus and merged
+     * @return the resulting ImagePlus
+     */
+    private ImagePlus matToRGBImagePlus(List<Mat> rgbChannels){
+        if(rgbChannels.size() != 3){
+            IJ.showMessage("Only RGB images with 3 channels accepted as input");
+            return null;
+        }
+        List<ImagePlus> imagePlusChannels = new ArrayList<>();
+        // I convert the rgb mat channels into imagePlus
+        ImagePlus channel;
+        for (Mat el: rgbChannels) {
+            channel = matToImagePlus(el);
+            imagePlusChannels.add(channel);
+        }
+        ImagePlus mergedColoredImage = new ImagePlus();
+        // I merge the 3 rgb single channels into one, now consisting in the rgb image
+        mergedColoredImage.setStack(RGBStackMerge.mergeStacks(imagePlusChannels.get(2).getImageStack(), imagePlusChannels.get(1).getImageStack(), imagePlusChannels.get(0).getImageStack(), false));
+        return  mergedColoredImage;
     }
 
     public Map<Pair<Integer, Integer>, Pair<List<Point>, List<Point>>> getMapOfPoints() {

@@ -127,6 +127,10 @@ public class BriefBuilder extends AbstractBuilder<Mat> {
         return canGo;
     }
 
+    /**
+     * Aligns the uploaded images, dinamically adapting the output stack dimensions,
+     * therefore keeping all information.
+     */
     @Override
     public void alignKeepOriginal() {
         // alignCalled is needed because transformImage() is also used as a caching function
@@ -206,7 +210,11 @@ public class BriefBuilder extends AbstractBuilder<Mat> {
         }
     }
 
-    // here the algorithm is applied to align (transform) the image
+    /**
+     * transform an image as Mat, aligning it with the one taken as source using a keypoint algorithm
+     * @param transformedImageIndex the index of the image to be aligned
+     * @return the image, as Mat, now aligned
+     */
     private Mat transformImage(int transformedImageIndex) {
         // two images
         final Mat firstImage = this.getSourceImage();
@@ -232,7 +240,7 @@ public class BriefBuilder extends AbstractBuilder<Mat> {
             IJ.showMessage("Check all your images, one of them seems to have not valuable matches for our algorithm");
         }
         List<DMatch> goodMatches = this.getGoodMatches(knnMatches);
-        // Below four matches the images couldn't be related (TOMOVE to a separate function)
+        // Below four matches the images couldn't be related
         if (goodMatches.size() > 4) {
             final MatOfPoint2f points = new MatOfPoint2f(this.getPointsArray(firstImage));
             Mat dest = new Mat();
@@ -263,18 +271,7 @@ public class BriefBuilder extends AbstractBuilder<Mat> {
             if (alignCalled) {
                 // if the array is not empty, it means it got filled because the image was rgb.
                 if(!imagesSplit.get(transformedImageIndex).isEmpty()){
-                    List<Mat> warpedChannelList = new ArrayList<>();
-                    // shift (align) all the rgb channels one by one
-                    for(int j = 0; j < imagesSplit.get(transformedImageIndex).size(); j++){
-                        Mat warpedChannel = new Mat();
-                        // down here the max offset is added to size (width and height), this is possible because transformImage
-                        // gets called already nImages times, and the max shifts are already calculated as well.
-                        Imgproc.warpPerspective(imagesSplit.get(transformedImageIndex).get(j), warpedChannel, perspectiveM, new Size(this.getFinalStackDimension().width + this.getMaxXshift(), this.getMaximumSize().height + this.getMaxYshift()), Imgproc.WARP_INVERSE_MAP, Core.BORDER_CONSTANT);
-                        warpedChannelList.add(warpedChannel);
-                    }
-                    // replace the old rgb channels with the aligned ones.
-                    imagesSplit.get(transformedImageIndex).clear();
-                    imagesSplit.get(transformedImageIndex).addAll(warpedChannelList);
+                    alignImagesSplitChannels(transformedImageIndex, perspectiveM);
                 }
             }
             // Takes image to which apply transformation, output image, the perspective transformation matrix,
@@ -286,7 +283,26 @@ public class BriefBuilder extends AbstractBuilder<Mat> {
             return warpedImage;
         }
         return null;
+    }
 
+    /**
+     * Aligns rgb image channels, based on a perspective transform matrix
+     * @param imageIndex the index of the rgb image
+     * @param perspectiveTransform the perspective transform matrix used to align the image
+     */
+    private void alignImagesSplitChannels(int imageIndex, Mat perspectiveTransform){
+        List<Mat> warpedChannelList = new ArrayList<>();
+        // shift (align) all the rgb channels one by one
+        for(int j = 0; j < imagesSplit.get(imageIndex).size(); j++){
+            Mat warpedChannel = new Mat();
+            // down here the max offset is added to size (width and height), this is possible because transformImage
+            // gets called already nImages times, and the max shifts are already calculated as well.
+            Imgproc.warpPerspective(imagesSplit.get(imageIndex).get(j), warpedChannel, perspectiveTransform, new Size(this.getFinalStackDimension().width + this.getMaxXshift(), this.getMaximumSize().height + this.getMaxYshift()), Imgproc.WARP_INVERSE_MAP, Core.BORDER_CONSTANT);
+            warpedChannelList.add(warpedChannel);
+        }
+        // replace the old rgb channels with the aligned ones.
+        imagesSplit.get(imageIndex).clear();
+        imagesSplit.get(imageIndex).addAll(warpedChannelList);
     }
 
     /**

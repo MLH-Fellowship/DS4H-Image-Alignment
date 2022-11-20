@@ -23,8 +23,8 @@ public class RemoveImageDialog extends JDialog {
     public RemoveImageDialog(List<ImageFile> imageFiles, OnRemoveDialogEventListener listener) {
         $$$setupUI$$$();
         setContentPane(contentPane);
-        this.setResizable(false);
         this.setTitle("Remove image");
+        this.setResizable(true);
 
         model = new DefaultListModel<>();
         imageFiles.forEach(model::addElement);

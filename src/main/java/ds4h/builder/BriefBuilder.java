@@ -128,7 +128,7 @@ public class BriefBuilder extends AbstractBuilder<Mat> {
     }
 
     /**
-     * Aligns the uploaded images, dinamically adapting the output stack dimensions,
+     * Aligns the uploaded images, dynamically adapting the output stack dimensions,
      * therefore keeping all information.
      */
     @Override
@@ -237,7 +237,7 @@ public class BriefBuilder extends AbstractBuilder<Mat> {
         try {
             matcher.knnMatch(firstDescriptor, secondDescriptor, knnMatches, 2);
         } catch (Exception e) {
-            IJ.showMessage("Check all your images, one of them seems to have not valuable matches for our algorithm");
+            IJ.showMessage("Check all your images, one of them seems to have no valuable matches for our algorithm");
         }
         List<DMatch> goodMatches = this.getGoodMatches(knnMatches);
         // Below four matches the images couldn't be related
@@ -247,38 +247,7 @@ public class BriefBuilder extends AbstractBuilder<Mat> {
             // Check directly the Javadoc, to learn more
             Core.perspectiveTransform(points, dest, this.getHomography(goodMatches, firstKeyPoints.toList(), secondKeyPoints.toList(), transformedImageIndex));
             Mat perspectiveM = Imgproc.getPerspectiveTransform(points, dest);
-            // images higher than sourceImage get partially cut, so this is to shift
-            // the whole stack vertically of the necessary amount
-            perspectiveM.put(1,2, perspectiveM.get(1,2)[0] - getSourceVerticalShift());
-            // Get horizontal and vertical shift of the image from the perspectiveMatrix (do a matrix dump to check it out)
-            // if it's < 1 then it's either zero or the matrix calculation error equivalent to 0
-            int imgHorizontalShift = (abs((int) perspectiveM.get(0,2)[0])) < 1 ? 0 : ((int) perspectiveM.get(0,2)[0]);
-            int imgVerticalShift = (abs((int) perspectiveM.get(1,2)[0])) < 1 ? 0 : ((int) perspectiveM.get(1,2)[0]);
-            if(!alignCalled){
-                horizShifts.add(transformedImageIndex, imgHorizontalShift);
-                verticShifts.add(transformedImageIndex, imgVerticalShift);
-            }
-            // check and update the max shifts, if needed
-            if(this.getMaxXshift() < abs(imgHorizontalShift)){
-                this.setMaxXshift(abs(imgHorizontalShift));
-            }
-            if(this.getMaxYshift() < abs(imgVerticalShift)){
-                this.setMaxYshift(abs(imgVerticalShift));
-            }
-            Mat warpedImage = new Mat();
-            //first check if align function was called, not to shift twice
-            // (it gets called by cachetransformedImage(), by alignKeepOriginal() or by align()).
-            if (alignCalled) {
-                // if the array is not empty, it means it got filled because the image was rgb.
-                if(!imagesSplit.get(transformedImageIndex).isEmpty()){
-                    alignImagesSplitChannels(transformedImageIndex, perspectiveM);
-                }
-            }
-            // Takes image to which apply transformation, output image, the perspective transformation matrix,
-            // the size of the output image, then warps the image using the matrix
-            Imgproc.warpPerspective(secondImage, warpedImage, perspectiveM, new Size(this.getFinalStackDimension().width + this.getMaxXshift(), this.getMaximumSize().height + this.getMaxYshift()), Imgproc.WARP_INVERSE_MAP, Core.BORDER_CONSTANT);
-            // not the nicest solution, but obviously the image's data address changes after but the image it's the same, so to retrieve the same path I had to do this
-            this.replaceKey(secondImage.dataAddr(), warpedImage.dataAddr());
+            Mat warpedImage = applyWarping(secondImage, transformedImageIndex, perspectiveM);
             // then to all the things need to create a virtual stack of images
             return warpedImage;
         }
@@ -286,11 +255,54 @@ public class BriefBuilder extends AbstractBuilder<Mat> {
     }
 
     /**
+     *
+     * @param image the Mat (image) to be warped
+     * @param imageIndex the image index
+     * @param perspectiveM the perspective transformation matrix necessary for the warping
+     * @return the warped Mat
+     */
+    private Mat applyWarping(Mat image, int imageIndex, Mat perspectiveM){
+        // images higher than sourceImage get partially cut, so this is to shift
+        // the whole stack vertically of the necessary amount
+        perspectiveM.put(1,2, perspectiveM.get(1,2)[0] - getSourceVerticalShift());
+        // Get horizontal and vertical shift of the image from the perspectiveMatrix (do a matrix dump to check it out)
+        // if it's < 1 then it's either zero or the matrix calculation error equivalent to 0
+        int imgHorizontalShift = (abs((int) perspectiveM.get(0,2)[0])) < 1 ? 0 : ((int) perspectiveM.get(0,2)[0]);
+        int imgVerticalShift = (abs((int) perspectiveM.get(1,2)[0])) < 1 ? 0 : ((int) perspectiveM.get(1,2)[0]);
+        if(!alignCalled){
+            horizShifts.add(imageIndex, imgHorizontalShift);
+            verticShifts.add(imageIndex, imgVerticalShift);
+        }
+        // check and update the max shifts, if needed
+        if(this.getMaxXshift() < abs(imgHorizontalShift)){
+            this.setMaxXshift(abs(imgHorizontalShift));
+        }
+        if(this.getMaxYshift() < abs(imgVerticalShift)){
+            this.setMaxYshift(abs(imgVerticalShift));
+        }
+        Mat warpedImage = new Mat();
+        //first check if align function was called, not to shift twice
+        // (it gets called by cachetransformedImage(), by alignKeepOriginal() or by align()).
+        if (alignCalled) {
+            // if the array is not empty, it means it got filled because the image was rgb.
+            if(!imagesSplit.get(imageIndex).isEmpty()){
+                alignImageChannels(imageIndex, perspectiveM);
+            }
+        }
+        // Takes image to which apply transformation, output image, the perspective transformation matrix,
+        // the size of the output image, then warps the image using the matrix
+        Imgproc.warpPerspective(image, warpedImage, perspectiveM, new Size(this.getFinalStackDimension().width + this.getMaxXshift(), this.getMaximumSize().height + this.getMaxYshift()), Imgproc.WARP_INVERSE_MAP, Core.BORDER_CONSTANT);
+        // not the nicest solution, but obviously the image's data address changes after but the image it's the same, so to retrieve the same path I had to do this
+        this.replaceKey(image.dataAddr(), warpedImage.dataAddr());
+        return warpedImage;
+    }
+
+    /**
      * Aligns rgb image channels, based on a perspective transform matrix
      * @param imageIndex the index of the rgb image
      * @param perspectiveTransform the perspective transform matrix used to align the image
      */
-    private void alignImagesSplitChannels(int imageIndex, Mat perspectiveTransform){
+    private void alignImageChannels(int imageIndex, Mat perspectiveTransform){
         List<Mat> warpedChannelList = new ArrayList<>();
         // shift (align) all the rgb channels one by one
         for(int j = 0; j < imagesSplit.get(imageIndex).size(); j++){

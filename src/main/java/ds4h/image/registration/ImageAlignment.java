@@ -50,10 +50,11 @@ import ij.io.SaveDialog;
 import ij.plugin.frame.RoiManager;
 import loci.common.enumeration.EnumException;
 import loci.formats.UnknownFormatException;
-import org.opencv.core.Core;
 import org.opencv.core.Mat;
-import org.opencv.osgi.OpenCVInterface;
 
+import javax.imageio.ImageIO;
+import javax.imageio.ImageReader;
+import javax.imageio.stream.ImageInputStream;
 import javax.swing.*;
 import java.awt.*;
 import java.beans.PropertyChangeEvent;
@@ -63,6 +64,8 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.MathContext;
 import java.text.MessageFormat;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -403,8 +406,8 @@ public class ImageAlignment implements OnMainDialogEventListener, OnAlignDialogE
         } catch (Exception e) {
             IJ.showMessage(e.getMessage());
         }
-        this.getMainDialog().setPrevImageButtonEnabled(this.getEditor().hasPrevious());
-        this.getMainDialog().setNextImageButtonEnabled(this.getEditor().hasNext());
+        this.getMainDialog().setPrevImageButtonEnabled(true);
+        this.getMainDialog().setNextImageButtonEnabled(true);
         this.getMainDialog().setTitle(MessageFormat.format(MAIN_DIALOG_TITLE_PATTERN, this.getEditor().getCurrentPosition() + 1, this.getEditor().getAllImagesCounterSum()));
         this.refreshRoiGUI();
     }
@@ -549,26 +552,44 @@ public class ImageAlignment implements OnMainDialogEventListener, OnAlignDialogE
         });
     }
 
+    /**
+     * Changes displayed image handling ChangeImageEvent
+     * @param dialogEvent accepted params are 'ChangeImageEvent.ChangeDirection.NEXT' and 'ChangeImageEvent.ChangeDirection.NEXT'
+     */
     private void getChangeImageThread(ChangeImageEvent dialogEvent) {
         if (this.getEditor().getCurrentImage() != null) {
             this.getMainDialog().removeMouseListener();
         }
-        boolean isNext = dialogEvent.getChangeDirection() == ChangeImageEvent.ChangeDirection.NEXT && !this.getEditor().hasNext();
-        boolean isPrevious = dialogEvent.getChangeDirection() == ChangeImageEvent.ChangeDirection.PREV && !this.getEditor().hasPrevious();
-        if (isNext || isPrevious) {
-            this.getLoadingDialog().hideDialog();
-        }
-        if (dialogEvent.getChangeDirection() == ChangeImageEvent.ChangeDirection.NEXT) {
+//        boolean isNext = dialogEvent.getChangeDirection() == ChangeImageEvent.ChangeDirection.NEXT && !this.getEditor().hasNext();
+//        boolean isPrevious = dialogEvent.getChangeDirection() == ChangeImageEvent.ChangeDirection.PREV && !this.getEditor().hasPrevious();
+//        if (isNext || isPrevious) {
+//            this.getLoadingDialog().hideDialog();
+//        }
+        if ((dialogEvent.getChangeDirection() == ChangeImageEvent.ChangeDirection.NEXT) && this.getEditor().hasNext()) {
             this.getEditor().next();
-        } else {
+        } else if ((dialogEvent.getChangeDirection() == ChangeImageEvent.ChangeDirection.NEXT) && !this.getEditor().hasNext()){
+            //in this case it gets to the first image in order to loop the imageslider
+            while(this.getEditor().hasPrevious()){
+                this.getEditor().previous();
+            }
+            //this.getEditor().previous();
+        } else if ((dialogEvent.getChangeDirection() == ChangeImageEvent.ChangeDirection.PREV) && this.getEditor().hasPrevious()) {
             this.getEditor().previous();
+        } else {
+            //in this case it gets to the last image in order to loop the imageslider
+            while(this.getEditor().hasNext()){
+                this.getEditor().next();
+            }
+            //this.getEditor().next();
         }
 
         if (this.getEditor().getCurrentImage() != null) {
             SwingUtilities.invokeLater(() -> {
                 this.getMainDialog().changeImage(this.getEditor().getCurrentImage());
-                this.getMainDialog().setPrevImageButtonEnabled(this.getEditor().hasPrevious());
-                this.getMainDialog().setNextImageButtonEnabled(this.getEditor().hasNext());
+//                this.getMainDialog().setPrevImageButtonEnabled(this.getEditor().hasPrevious());
+//                this.getMainDialog().setNextImageButtonEnabled(this.getEditor().hasNext());
+                this.getMainDialog().setPrevImageButtonEnabled(true);
+                this.getMainDialog().setNextImageButtonEnabled(true);
                 this.getMainDialog().setTitle(MessageFormat.format(MAIN_DIALOG_TITLE_PATTERN, this.getEditor().getCurrentPosition() + 1, this.getEditor().getAllImagesCounterSum()));
                 this.getLoadingDialog().hideDialog();
                 this.refreshRoiGUI();
@@ -586,8 +607,8 @@ public class ImageAlignment implements OnMainDialogEventListener, OnAlignDialogE
                     WindowManager.setCurrentWindow(this.getMainDialog());
                     WindowManager.getCurrentWindow().getCanvas().fitToWindow();
                     this.getMainDialog().setVisible(true);
-                    this.getMainDialog().setPrevImageButtonEnabled(this.getEditor().hasPrevious());
-                    this.getMainDialog().setNextImageButtonEnabled(this.getEditor().hasNext());
+                    this.getMainDialog().setPrevImageButtonEnabled(true);
+                    this.getMainDialog().setNextImageButtonEnabled(true);
                     this.getMainDialog().setTitle(MessageFormat.format(MAIN_DIALOG_TITLE_PATTERN, this.getEditor().getCurrentPosition() + 1, this.getEditor().getAllImagesCounterSum()));
                 });
                 return;
@@ -609,7 +630,7 @@ public class ImageAlignment implements OnMainDialogEventListener, OnAlignDialogE
     }
 
     @Override
-    public void onAlignDialogEventListener(IAlignDialogEvent dialogEvent) {
+    public void onAlignDialogEventListener(IAlignDialogEvent dialogEvent) throws IOException {
         if (dialogEvent instanceof SaveEvent) {
             SaveDialog saveDialog = new SaveDialog("Save as", "aligned", TIFF_EXT);
             if (saveDialog.getFileName() == null) {
@@ -625,8 +646,43 @@ public class ImageAlignment implements OnMainDialogEventListener, OnAlignDialogE
 
         if (dialogEvent instanceof ReuseImageEvent) {
             this.disposeAll();
-            this.initialize(Collections.singletonList(this.getTempImages().get(this.getTempImages().size() - 1)));
+            //previous solution commented
+            //this.initialize(Collections.singletonList(this.getTempImages().get(this.getTempImages().size() - 1)));
+            //in the new initialize, getSplitTIFFImages is called, which separates the TIFF file with the
+            //aligned images into single TIFF files. To do this, it utilizes the getTempImages where they are stored.
+            this.initialize(getSplitTIFFImages(this.getTempImages().get(this.getTempImages().size() - 1)));
         }
+    }
+
+    /**
+     *
+     * @param imagePath  the path to a TIFF file with aligned images
+     * @return           a list with the path of single TIFF files obtained from the imagePath
+     * @throws IOException
+     */
+    private List<String> getSplitTIFFImages(String imagePath) throws IOException {
+        List<String> list = new ArrayList<>();
+        int nPages = 0;
+        ImageInputStream is = ImageIO.createImageInputStream(new File(imagePath));
+        if (is == null || is.length() == 0){
+            // handle error
+        }
+        Iterator<ImageReader> iterator = ImageIO.getImageReaders(is);
+        // We are just looking for the first reader compatible:
+        ImageReader reader = (ImageReader) iterator.next();
+        iterator = null;
+        reader.setInput(is);
+        //get the number of pages
+        nPages = reader.getNumImages(true);
+        for(int i = 0; i < nPages; i++){
+            //we decide the name
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd-HH-mm-ss");
+            String filePath = IJ.getDir("temp") + LocalDateTime.now().format(formatter) + "_file"+ i + TIFF_EXT;
+            File file = new File(filePath);
+            ImageIO.write(reader.read(i), "TIFF", file);
+            list.add(filePath);
+        }
+        return list;
     }
 
     @Override
@@ -664,8 +720,8 @@ public class ImageAlignment implements OnMainDialogEventListener, OnAlignDialogE
                 if (this.getEditor().getAllImagesCounterSum() < finalIndex && this.getEditor().getCurrentPosition() == this.getEditor().getAllImagesCounterSum()) {
                     finalIndex = this.getEditor().getAllImagesCounterSum();
                 }
-                this.getMainDialog().setPrevImageButtonEnabled(finalIndex > 1 && this.getEditor().getCurrentPosition() != 0);
-                this.getMainDialog().setNextImageButtonEnabled(getEditor().hasNext());
+                this.getMainDialog().setPrevImageButtonEnabled(true);
+                this.getMainDialog().setNextImageButtonEnabled(true);
                 this.getMainDialog().setTitle(MessageFormat.format(MAIN_DIALOG_TITLE_PATTERN, finalIndex, this.getEditor().getAllImagesCounterSum()));
                 this.refreshRoiGUI();
                 this.getRemoveImageDialog().dispose();
@@ -714,8 +770,8 @@ public class ImageAlignment implements OnMainDialogEventListener, OnAlignDialogE
             this.editor.addPropertyChangeListener(this);
             this.getEditor().next();
             this.mainDialog = new MainDialog(this.getEditor().getCurrentImage(), this);
-            this.getMainDialog().setPrevImageButtonEnabled(this.getEditor().hasPrevious());
-            this.getMainDialog().setNextImageButtonEnabled(this.getEditor().hasNext());
+            this.getMainDialog().setPrevImageButtonEnabled(true);
+            this.getMainDialog().setNextImageButtonEnabled(true);
             this.getMainDialog().setTitle(MessageFormat.format(MAIN_DIALOG_TITLE_PATTERN, this.getEditor().getCurrentPosition() + 1, this.getEditor().getAllImagesCounterSum()));
             this.getMainDialog().setAutoAlignButtonEnabled(this.getEditor().getAllImagesCounterSum() > 1);
             this.getLoadingDialog().hideDialog();

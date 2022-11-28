@@ -18,7 +18,6 @@ import ij.IJ;
 import ij.ImagePlus;
 import ij.VirtualStack;
 import ij.io.FileSaver;
-import ij.process.ImageConverter;
 import ij.process.ImageProcessor;
 
 import javax.swing.*;
@@ -44,7 +43,7 @@ public abstract class AbstractBuilder<T> implements AlignBuilder {
     private ImagePlus transformedImagesStack;
     private Dimension maximumSize;
 
-    private Dimension finalStack;
+    private Dimension finalStackDimension;
     private List<Integer> offsetsX;
     private List<Integer> offsetsY;
     private Integer maxOffsetX;
@@ -88,7 +87,9 @@ public abstract class AbstractBuilder<T> implements AlignBuilder {
         try {
             this.setTransformedImagesStack(new ImagePlus("", this.getVirtualStack()));
             String filePath = IJ.getDir(TEMP_PATH) + this.getTransformedImagesStack().hashCode() + TIFF_EXT;
-            new ImageConverter(this.getTransformedImagesStack()).convertToGray8();
+            // commented line down: forced conversion to gray, don't know why;
+            // fixed it to add colored images, still works with grayscale ones
+            //new ImageConverter(this.getTransformedImagesStack()).convertToGray8();
             new FileSaver(this.getTransformedImagesStack()).saveAsTiff(filePath);
             this.getTempImages().add(filePath);
             this.getLoadingDialog().hideDialog();
@@ -110,14 +111,14 @@ public abstract class AbstractBuilder<T> implements AlignBuilder {
 
     protected void checkFinalStackDimension() {
         // The final stack of the image is exceeding the maximum size of the images for imagej (see http://imagej.1557.x6.nabble.com/Large-image-td5015380.html)
-        if (((double) this.getFinalStack().width * this.getFinalStack().height) > Integer.MAX_VALUE) {
+        if (((double) this.getFinalStackDimension().width * this.getFinalStackDimension().height) > Integer.MAX_VALUE) {
             JOptionPane.showMessageDialog(null, IMAGE_SIZE_TOO_BIG, IMAGE_SIZE_TOO_BIG_TITLE, JOptionPane.ERROR_MESSAGE);
             this.getLoadingDialog().hideDialog(); // take care of this
         }
     }
 
     protected void setFinalStackToVirtualStack() {
-        this.setVirtualStack(new VirtualStack(this.getFinalStack().width, this.getFinalStack().height, ColorModel.getRGBdefault(), IJ.getDir(TEMP_PATH)));
+        this.setVirtualStack(new VirtualStack(this.getFinalStackDimension().width, this.getFinalStackDimension().height, ColorModel.getRGBdefault(), IJ.getDir(TEMP_PATH)));
     }
 
     protected void addFinalStackToVirtualStack() {
@@ -164,6 +165,7 @@ public abstract class AbstractBuilder<T> implements AlignBuilder {
         return this.maximumSize;
     }
 
+    //takes input dimension and check if maximumSize needs to be updated
     protected void setMaximumSize(Dimension maximumSize) {
         for (int i = 0; i < this.getImagesDimensions().size(); i++) {
             Dimension dimension = this.getImagesDimensions().get(i);
@@ -254,11 +256,19 @@ public abstract class AbstractBuilder<T> implements AlignBuilder {
         this.maxOffsetYIndex = maxOffsetYIndex;
     }
 
-    public Dimension getFinalStack() {
-        return finalStack;
+    /**
+     *
+     * @return the set dimension 'finalStack'
+     */
+    public Dimension getFinalStackDimension() {
+        return finalStackDimension;
     }
 
-    public void setFinalStack(Dimension finalStack) {
-        this.finalStack = finalStack;
+    /**
+     *
+     * @param finalStackDimension the Dimension final stack to be set
+     */
+    public void setFinalStackDimension(Dimension finalStackDimension) {
+        this.finalStackDimension = finalStackDimension;
     }
 }

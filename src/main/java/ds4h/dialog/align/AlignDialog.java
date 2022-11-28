@@ -9,6 +9,7 @@ import ij.gui.StackWindow;
 
 import javax.swing.*;
 import java.awt.*;
+import java.io.IOException;
 
 public class AlignDialog extends StackWindow {
     private final OnAlignDialogEventListener listener;
@@ -43,8 +44,20 @@ public class AlignDialog extends StackWindow {
         final Menu fileMenu = new Menu("File");
         final MenuItem saveAsItem = new MenuItem("Save as...");
         final MenuItem reuseAsItem = new MenuItem("Reuse as source");
-        saveAsItem.addActionListener(e -> getListener().onAlignDialogEventListener(new SaveEvent()));
-        reuseAsItem.addActionListener(e -> getListener().onAlignDialogEventListener(new ReuseImageEvent()));
+        saveAsItem.addActionListener(e -> {
+            try {
+                getListener().onAlignDialogEventListener(new SaveEvent());
+            } catch (IOException ex) {
+                throw new RuntimeException(ex);
+            }
+        });
+        reuseAsItem.addActionListener(e -> {
+            try {
+                getListener().onAlignDialogEventListener(new ReuseImageEvent());
+            } catch (IOException ex) {
+                throw new RuntimeException(ex);
+            }
+        });
         fileMenu.add(saveAsItem);
         fileMenu.add(reuseAsItem);
         menuBar.add(fileMenu);
@@ -56,8 +69,20 @@ public class AlignDialog extends StackWindow {
         final JMenu fileMenu = new JMenu("File");
         final JMenuItem saveAsItem = new JMenuItem("Save as...");
         final JMenuItem reuseAsItem = new JMenuItem("Reuse as source");
-        saveAsItem.addActionListener(e -> getListener().onAlignDialogEventListener(new SaveEvent()));
-        reuseAsItem.addActionListener(e -> getListener().onAlignDialogEventListener(new ReuseImageEvent()));
+        saveAsItem.addActionListener(e -> {
+            try {
+                getListener().onAlignDialogEventListener(new SaveEvent());
+            } catch (IOException ex) {
+                throw new RuntimeException(ex);
+            }
+        });
+        reuseAsItem.addActionListener(e -> {
+            try {
+                getListener().onAlignDialogEventListener(new ReuseImageEvent());
+            } catch (IOException ex) {
+                throw new RuntimeException(ex);
+            }
+        });
         fileMenu.add(saveAsItem);
         fileMenu.add(reuseAsItem);
         menuBar.add(fileMenu);

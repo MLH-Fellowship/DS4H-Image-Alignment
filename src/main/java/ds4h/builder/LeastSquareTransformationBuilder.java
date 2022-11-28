@@ -42,7 +42,7 @@ public class LeastSquareTransformationBuilder extends AbstractBuilder<SlideImage
     public void init() {
         this.setMaximumSize(new Dimension());
         this.setSourceImage();
-        this.setFinalStack(new Dimension(this.getMaximumSize().width, this.getMaximumSize().height));
+        this.setFinalStackDimension(new Dimension(this.getMaximumSize().width, this.getMaximumSize().height));
         this.setOffsets();
         this.preInitFinalStack();
         this.checkFinalStackDimension();
@@ -50,8 +50,8 @@ public class LeastSquareTransformationBuilder extends AbstractBuilder<SlideImage
     }
 
     private void preInitFinalStack() {
-        this.getFinalStack().width = this.getFinalStack().width + this.getMaxOffsetX();
-        this.getFinalStack().height += this.getSourceImage().getHeight() == this.getMaximumSize().height ? this.getMaxOffsetY() : 0;
+        this.getFinalStackDimension().width = this.getFinalStackDimension().width + this.getMaxOffsetX();
+        this.getFinalStackDimension().height += this.getSourceImage().getHeight() == this.getMaximumSize().height ? this.getMaxOffsetY() : 0;
     }
 
     @Override
@@ -62,7 +62,7 @@ public class LeastSquareTransformationBuilder extends AbstractBuilder<SlideImage
 
     @Override
     protected ImageProcessor getFinalStackImageProcessor() {
-        final ImageProcessor processor = this.getSourceImage().getProcessor().createProcessor(this.getFinalStack().width, this.getFinalStack().height);
+        final ImageProcessor processor = this.getSourceImage().getProcessor().createProcessor(this.getFinalStackDimension().width, this.getFinalStackDimension().height);
         processor.insert(this.getSourceImage().getProcessor(), this.getMaxOffsetX(), this.getMaxOffsetY());
         return processor;
     }
@@ -117,7 +117,7 @@ public class LeastSquareTransformationBuilder extends AbstractBuilder<SlideImage
     @Override
     public void alignKeepOriginal() {
         for (int index = 0; index < this.getEditor().getAllImagesCounterSum(); index++) {
-            final ImageProcessor newProcessor = new ColorProcessor(this.getFinalStack().width, this.getFinalStack().height);
+            final ImageProcessor newProcessor = new ColorProcessor(this.getFinalStackDimension().width, this.getFinalStackDimension().height);
             final ImagePlus transformedImage = LeastSquareImageTransformation.transform(this.getEditor().getOriginalWholeSlideImage(index), this.getEditor().getWholeSlideImage(index), this.getSourceImageOriginal(), this.getSourceImage(), this.getSettingDialog().getEvent());
             final SlideImage transformedOriginalSlideImage = this.getEditor().getOriginalWholeSlideImage(index);
             int offsetXOriginal = 0;
